@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+
+sample
+
+# Backend env, session data, and logs
+backend/.env
+backend/sessions/
+backend/.logs/
+
+# Frontend build artifacts and dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/.office-addin-dev-certs/
+.DS_Store
