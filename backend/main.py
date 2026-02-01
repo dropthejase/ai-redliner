@@ -35,7 +35,7 @@ app.add_middleware(
 if not MOCK_MODE:
     model = AnthropicModel(
         client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
-        model_id="claude-sonnet-4-5-20250929",
+        model_id="claude-haiku-4-5-20251001",
     )
 
 # In-memory agent cache: session_id -> Agent

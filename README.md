@@ -11,6 +11,7 @@ AI-powered Word document redlining assistant. Ask the agent to review or modify 
 - **Node.js** (18+) and **npm** — for the frontend
 - **Python 3.13** and **uv** — for the backend
 - **Microsoft Word** (desktop, macOS or Windows) — to sideload and run the add-in
+- **Anthropic Claude API Key**
 
 ### 1. Backend
 
