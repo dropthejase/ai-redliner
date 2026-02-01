@@ -28,34 +28,39 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
   const canSend = value.trim().length > 0 && !disabled;
 
   return (
-    <div className="flex gap-2 items-end border-t border-border pt-3">
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Ask a question or request changes..."
-        disabled={disabled}
-        className={cn(
-          "flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2",
-          "text-sm text-foreground placeholder:text-muted-foreground",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
-          "disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed",
-          "min-h-[60px] max-h-[160px]"
-        )}
-      />
-      <button
-        onClick={handleSend}
-        disabled={!canSend}
-        className={cn(
-          "flex items-center justify-center w-9 h-9 rounded-lg transition-colors",
-          canSend
-            ? "bg-primary text-primary-foreground hover:bg-primary/90"
-            : "bg-muted text-muted-foreground cursor-not-allowed"
-        )}
-      >
-        <Send className="w-4 h-4" />
-      </button>
+    <div className="shrink-0 bg-card rounded-xl border border-border shadow-sm p-3">
+      <div className="flex gap-2 items-end">
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask a question or request changes..."
+          disabled={disabled}
+          className={cn(
+            "flex-1 resize-none bg-transparent px-1 py-0.5",
+            "text-sm text-foreground placeholder:text-muted-foreground",
+            "focus:outline-none",
+            "disabled:text-muted-foreground disabled:cursor-not-allowed",
+            "min-h-[44px] max-h-[140px]"
+          )}
+        />
+        <button
+          onClick={handleSend}
+          disabled={!canSend}
+          className={cn(
+            "flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150 shrink-0",
+            canSend
+              ? "bg-primary text-primary-foreground hover:bg-primary/85 shadow-sm"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
+          )}
+        >
+          <Send className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2 px-1">
+        Enter to send · Shift+Enter for new line
+      </p>
     </div>
   );
 };

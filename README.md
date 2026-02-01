@@ -31,25 +31,27 @@ npm install
 
 ## Running
 
-You need **two terminals** — one for the backend, one for the frontend.
+You need **two terminals** — one for the backend, one for the frontend. Start the frontend first, because it generates the SSL certs the backend reuses.
 
-### Terminal 1 — Backend
-
-```bash
-cd backend
-uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-The server starts on `http://127.0.0.1:8000`.
-
-### Terminal 2 — Frontend
+### Terminal 1 — Frontend
 
 ```bash
 cd frontend
 npm start
 ```
 
-The webpack dev server starts on `https://localhost:3000`.
+The webpack dev server starts on `https://localhost:3000` and generates dev certs at `~/.office-addin-dev-certs/`.
+
+### Terminal 2 — Backend
+
+```bash
+cd backend
+uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload \
+  --ssl-keyfile ~/.office-addin-dev-certs/localhost.key \
+  --ssl-certfile ~/.office-addin-dev-certs/localhost.crt
+```
+
+The server starts on `https://localhost:8000`.
 
 ### Word — Sideload the add-in
 
@@ -67,7 +69,9 @@ Start the backend with `MOCK=1`:
 
 ```bash
 cd backend
-MOCK=1 uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+MOCK=1 uv run uvicorn main:app --host 127.0.0.1 --port 8000 --reload \
+  --ssl-keyfile ~/.office-addin-dev-certs/localhost.key \
+  --ssl-certfile ~/.office-addin-dev-certs/localhost.crt
 ```
 
 The frontend needs no changes. Type anything in the taskpane and it will receive the mock response.

@@ -39,21 +39,27 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   documentHashWhenSent,
   onHashMismatch,
 }) => {
+  const bottomRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, pendingActions.length, loading]);
+
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 pr-1">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
       {messages.map((msg, index) => (
         <React.Fragment key={index}>
           {/* Tool usage badge */}
           {msg.role === "tool_indicator" && (
             <div className="flex justify-center">
-              <span className="inline-flex items-center gap-1.5 bg-accent text-accent-foreground text-xs px-2.5 py-1 rounded-full font-medium">
+              <span className="inline-flex items-center gap-1.5 bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full font-medium shadow-sm">
                 <Wrench className="w-3 h-3" />
                 Using {msg.tool_name}
               </span>
             </div>
           )}
 
-          {/* Action history (previously acted-upon modifications) */}
+          {/* Action history */}
           {msg.role === "action_history" && msg.actions && (
             <ModificationReview
               modifications={msg.actions}
@@ -74,16 +80,16 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
               <div className={cn(msg.role === "user" ? "flex justify-end" : "flex justify-start")}>
                 <div
                   className={cn(
-                    "max-w-[92%] px-3 py-2 rounded-xl text-sm leading-relaxed",
+                    "max-w-[90%] px-3.5 py-2.5 text-sm leading-relaxed",
                     msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-secondary text-secondary-foreground rounded-bl-sm"
+                      ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm shadow-sm"
+                      : "bg-card text-card-foreground rounded-2xl rounded-bl-sm border border-border shadow-sm"
                   )}
                 >
                   {msg.role === "user" ? (
                     msg.content[0].text
                   ) : (
-                    <div className="prose prose-sm max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0">
+                    <div className="[&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ul]:pl-4 [&>ul>li]:list-disc [&>strong]:font-semibold">
                       <ReactMarkdown>{msg.content[0].text}</ReactMarkdown>
                     </div>
                   )}
@@ -108,15 +114,18 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
       {loading &&
         messages.length > 0 &&
         messages[messages.length - 1].role === "user" && (
-          <div className="flex items-center gap-2 text-muted-foreground text-xs italic">
-            <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+          <div className="flex justify-start">
+            <div className="bg-card border border-border rounded-2xl rounded-bl-sm shadow-sm px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
             </div>
-            Generating response...
           </div>
         )}
+
+      <div ref={bottomRef} />
     </div>
   );
 };

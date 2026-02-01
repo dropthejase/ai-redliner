@@ -3,6 +3,7 @@ import json
 import logging
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from strands import Agent, tool
 from strands.models.anthropic import AnthropicModel
@@ -11,6 +12,8 @@ from agent.prompts import REDLINER_PROMPT
 from agent.utils import remove_thinking_tags, convert_from_placeholders, convert_to_placeholders
 
 load_dotenv()
+
+MOCK_MODE = os.environ.get("MOCK", "").strip() == "1"
 
 # Logging — file only
 logger = logging.getLogger(__name__)
@@ -21,12 +24,19 @@ logger.addHandler(_handler)
 
 # FastAPI app
 app = FastAPI()
-
-# Model — stateless client wrapper, created once
-model = AnthropicModel(
-    client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
-    model_id="claude-sonnet-4-5-20250929",
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://localhost:3000"],
+    allow_methods=["POST"],
+    allow_headers=["Content-Type", "x-session-id"],
 )
+
+# Model — stateless client wrapper, created once (skipped in mock mode)
+if not MOCK_MODE:
+    model = AnthropicModel(
+        client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
+        model_id="claude-sonnet-4-5-20250929",
+    )
 
 # In-memory agent cache: session_id -> Agent
 _agent_cache: dict[str, Agent] = {}
@@ -152,6 +162,76 @@ async def stream_agent_response(agent: Agent, user_message: str):
                                 logger.error("Failed to parse microsoft_actions: %s", str(e))
 
 
+async def mock_stream(word_document: str):
+    """Hardcoded SSE sequence for local frontend testing. No API key required.
+    Exercises every microsoft_action type once."""
+    import asyncio
+
+    # 1. Conversational text (streamed in two chunks to simulate batching)
+    yield {"type": "content", "data": "Sure! Here's "}
+    await asyncio.sleep(0.3)
+    yield {"type": "content", "data": "a demo of every action type."}
+    await asyncio.sleep(0.3)
+
+    # 2. Tool badge
+    yield {"type": "tool_use", "tool_name": "microsoft_actions_tool"}
+    await asyncio.sleep(0.4)
+
+    # 3. One of each action type
+    yield {
+        "type": "microsoft_actions",
+        "actions": [
+            {
+                "task": "Rename recipe title",
+                "action": "replace",
+                "loc": "p0",
+                "new_text": "Cookies",
+            },
+            {
+                "task": "Append to abstract",
+                "action": "append",
+                "loc": "p2",
+                "new_text": " A classic homemade recipe.",
+            },
+            {
+                "task": "Prepend to ingredients",
+                "action": "prepend",
+                "loc": "p4",
+                "new_text": "You will need: ",
+            },
+            {
+                "task": "Delete steps placeholder",
+                "action": "delete",
+                "loc": "p6",
+            },
+            {
+                "task": "Highlight the abstract heading",
+                "action": "highlight",
+                "loc": "p1",
+            },
+            {
+                "task": "Bold the ingredients heading",
+                "action": "format_bold",
+                "loc": "p3",
+            },
+            {
+                "task": "Italicise the steps heading",
+                "action": "format_italic",
+                "loc": "p5",
+            },
+            {
+                "task": "Strikethrough the abstract placeholder",
+                "action": "strikethrough",
+                "loc": "p2",
+            },
+        ],
+    }
+    await asyncio.sleep(0.3)
+
+    # 4. End turn
+    yield {"type": "end_turn"}
+
+
 @app.post("/invoke")
 async def invoke(request: Request):
     body = await request.json()
@@ -163,6 +243,15 @@ async def invoke(request: Request):
 
     logger.info("Session: %s | Prompt length: %d | Document length: %d",
                 session_id, len(user_input), len(word_document))
+
+    if MOCK_MODE:
+        logger.info("MOCK MODE — returning hardcoded response")
+
+        async def mock_sse():
+            async for event in mock_stream(word_document):
+                yield f"data: {json.dumps(event)}\n\n"
+
+        return StreamingResponse(mock_sse(), media_type="text/event-stream")
 
     # Convert problematic characters to placeholders before sending to LLM
     word_document = convert_to_placeholders(word_document)

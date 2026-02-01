@@ -158,7 +158,7 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
   };
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-card">
+    <div className="border border-border rounded-lg bg-card">
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 py-2 bg-card-foreground/5 cursor-pointer select-none hover:bg-card-foreground/10 transition-colors"

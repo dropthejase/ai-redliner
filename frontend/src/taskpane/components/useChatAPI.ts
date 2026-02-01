@@ -21,7 +21,7 @@ export const useChatAPI = () => {
     setError(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/invoke", {
+      const response = await fetch("https://localhost:8000/invoke", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -53,6 +53,7 @@ export const useChatAPI = () => {
             const eventData = line.slice(6);
             try {
               const event = JSON.parse(eventData);
+              console.log("Received SSE event:", event);
               onResponse(event);
             } catch (parseError) {
               console.error("Failed to parse SSE event:", eventData, parseError);

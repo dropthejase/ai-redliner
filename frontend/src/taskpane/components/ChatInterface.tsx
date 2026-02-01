@@ -129,6 +129,9 @@ const ChatInterface: React.FC = () => {
       const documentContent = isEmpty ? "" : await getWordDocumentContent();
       const selectedText = await getSelectedText();
 
+      console.log(documentContent);
+      console.log("Selected text:", selectedText);
+
       const hash = simpleHash(documentContent);
       setDocumentHashWhenSent(hash);
 
