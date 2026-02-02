@@ -83,7 +83,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onContinue }) => {
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-1">
+    <div className="flex flex-col gap-2 pr-1">
       {sessions.map((session) => {
         const isExpanded = expandedSession === session.session_id;
         const messages = sessionMessages[session.session_id];

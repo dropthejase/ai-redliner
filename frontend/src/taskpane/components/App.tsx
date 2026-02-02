@@ -58,7 +58,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Page content */}
-      <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 gap-3">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-4 pb-4 gap-3">
         {page === "chat" && <ChatInterface selectedModel={selectedModel} sessionId={sessionId} onNewSession={handleNewSession} />}
         {page === "history" && <HistoryList onContinue={handleContinueSession} />}
         {page === "settings" && <Settings selectedModel={selectedModel} onModelChange={handleModelChange} />}

@@ -140,6 +140,9 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
       await context.sync();
     });
 
+    // Turn tracking back off so Word doesn't keep tracking user edits
+    await setTrackingMode("disable");
+
     if (errors.length > 0) {
       throw new Error(`Some actions failed:\n\n${errors.join("\n\n")}`);
     }

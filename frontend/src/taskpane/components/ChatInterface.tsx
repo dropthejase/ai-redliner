@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertCircle, X, RotateCcw } from "lucide-react";
+import { AlertCircle, X, MessageSquare } from "lucide-react";
 import ChatInput from "./ChatInput";
 import ChatMessageList from "./ChatMessageList";
 import { useChatAPI } from "./useChatAPI";
@@ -206,11 +206,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
     <div className="flex flex-col flex-1 min-h-0 gap-3">
       <div className="flex justify-end">
         <button
-          onClick={() => window.location.reload()}
+          onClick={onNewSession}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
         >
-          <RotateCcw className="w-3 h-3" />
-          Reload Plugin
+          <MessageSquare className="w-3 h-3" />
+          New Chat
         </button>
       </div>
 
