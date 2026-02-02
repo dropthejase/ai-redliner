@@ -42,67 +42,98 @@ def remove_thinking_tags(response_str):
 
 async def mock_stream(word_document: str, model_id: str = "unknown"):
     """Hardcoded SSE sequence for local frontend testing. No API key required.
-    Exercises every microsoft_action type once."""
+    Tests crucial operations: paragraph edits, table cell edits, row operations, and within-paragraph targeting.
+
+    Expected test document:
+    p0: The fox says [speech].
+    t0: [Table]
+    t0.r0.c0.p0: This is row 0 column 0 paragraph 0 with [test] placeholder and another [test] placeholder to test occurrence.
+    t0.r0.c0.p1: This is row 0 column 0 paragraph 1.
+    t0.r0.c1.p0: This is row 0 column 1 paragraph 0.
+    t0.r1.c0.p0: Try deleting this entire row!
+    t0.r1.c1.p0:
+    t0.r2.c0.p0: Try inserting a row after me
+    t0.r2.c1.p0:
+    p1: The rabbit [action].
+    p2: The squirrel [action].
+    """
     import asyncio
 
     # 1. Conversational text (streamed in chunks to simulate batching)
     yield {"type": "content", "data": f"This is {model_id}. "}
     await asyncio.sleep(0.3)
-    yield {"type": "content", "data": "Sure! Here's "}
+    yield {"type": "content", "data": "I'll demonstrate the key operations: "}
     await asyncio.sleep(0.3)
-    yield {"type": "content", "data": "a demo of every action type."}
+    yield {"type": "content", "data": "paragraph edits, table cell edits, row operations, and within-paragraph targeting."}
     await asyncio.sleep(0.3)
 
     # 2. Tool badge
     yield {"type": "tool_use", "tool_name": "microsoft_actions_tool"}
     await asyncio.sleep(0.4)
 
-    # 3. One of each action type
+    # 3. Crucial action set
     yield {
         "type": "microsoft_actions",
         "actions": [
+            # 1. Paragraph-level edit
             {
-                "task": "Rename recipe title",
+                "task": "Replace paragraph text",
                 "action": "replace",
                 "loc": "p0",
-                "new_text": "Cookies",
+                "new_text": "The fox says hello.",
             },
+            # 2. Within-paragraph edit (first occurrence of [test])
             {
-                "task": "Append to abstract",
-                "action": "append",
-                "loc": "p2",
-                "new_text": " A classic homemade recipe.",
+                "task": "Replace first [test] placeholder",
+                "action": "replace",
+                "loc": "t0.r0.c0.p0",
+                "new_text": "TEST1",
+                "withinPara": {
+                    "find": "[test]",
+                    "occurrence": 0,
+                },
             },
+            # 3. Within-paragraph edit (second occurrence of [test])
             {
-                "task": "Prepend to ingredients",
-                "action": "prepend",
-                "loc": "p4",
-                "new_text": "You will need: ",
+                "task": "Replace second [test] placeholder",
+                "action": "replace",
+                "loc": "t0.r0.c0.p0",
+                "new_text": "TEST2",
+                "withinPara": {
+                    "find": "[test]",
+                    "occurrence": 1,
+                },
             },
+            # 4. Table cell edit (full paragraph)
             {
-                "task": "Delete steps placeholder",
-                "action": "delete",
-                "loc": "p6",
+                "task": "Replace table cell paragraph",
+                "action": "replace",
+                "loc": "t0.r0.c1.p0",
+                "new_text": "This cell has been updated.",
             },
+            # 5. Row-level operation: delete row 1
             {
-                "task": "Highlight the abstract heading",
-                "action": "highlight",
-                "loc": "p1",
+                "task": "Delete row 1",
+                "action": "delete_row",
+                "loc": "t0.r1",
             },
+            # 6. Row-level operation: insert after row 2 (which becomes row 1 after deletion)
             {
-                "task": "Bold the ingredients heading",
-                "action": "format_bold",
-                "loc": "p3",
+                "task": "Insert new row after row 2",
+                "action": "insert_row",
+                "loc": "t0.r2.after",
+                "rowData": [["Inserted cell 1", "Inserted cell 2"]],
             },
+            # 7. Within-paragraph edit in regular paragraph
             {
-                "task": "Italicise the steps heading",
-                "action": "format_italic",
-                "loc": "p5",
-            },
-            {
-                "task": "Strikethrough the abstract placeholder",
-                "action": "strikethrough",
-                "loc": "p2",
+                "task": "Replace [action] placeholder",
+                "action": "replace",
+                "loc": "p8",
+                "new_text": "hops",
+                "withinPara": {
+                    "find": "[action]",
+                    "occurrence": 0,
+                },
             },
         ],
     }

@@ -168,3 +168,71 @@ tail -f backend/.logs/redliner.log
 
 1. Follow the instructions [here](https://learn.microsoft.com/en-us/office/dev/add-ins/testing/debug-add-ins-overview#debug-on-windows)
 2. Right-click the Word-Addin and click **Inspect Element**
+
+---
+
+## Features
+
+### Table-Aware Context
+
+Redliner represents Word tables explicitly in the document context sent to the agent:
+
+```text
+p0: Introduction text
+t0: [Table]
+t0.r0.c0.p0: Header cell 1
+t0.r0.c1.p0: Header cell 2
+t0.r1.c0.p0: Data cell 1
+t0.r1.c1.p0: Data cell 2
+p5: Text after table
+```
+
+This allows the agent to:
+
+- Understand table structure
+- Modify specific cells
+- Insert or delete entire rows
+- Apply formatting to table content
+
+### Within-Paragraph Edits
+
+The agent can target specific text within paragraphs instead of replacing entire paragraphs:
+
+```json
+{
+  "action": "replace",
+  "loc": "p5",
+  "new_text": "Section 3.2",
+  "withinPara": {
+    "find": "Section 3.1",
+    "occurrence": 0
+  }
+}
+```
+
+This enables surgical edits like:
+
+- Correcting cross-references
+- Updating specific terms
+- Formatting individual words or phrases
+
+### Row-Level Operations
+
+The agent can insert or delete entire table rows:
+
+```json
+{
+  "action": "delete_row",
+  "loc": "t0.r2",
+  "reasoning": "Remove obsolete data"
+}
+
+{
+  "action": "insert_row",
+  "loc": "t0.r0.after",
+  "rowData": [["New cell 1", "New cell 2"]],
+  "reasoning": "Add missing row"
+}
+```
+
+See [TABLES_AND_GRANULAR_EDITS.md](./TABLES_AND_GRANULAR_EDITS.md) for complete documentation of these features.

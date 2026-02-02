@@ -9,6 +9,10 @@ interface Action {
   action: string;
   loc: string;
   new_text?: string;
+  withinPara?: {
+    find: string;
+    occurrence: number;
+  };
 }
 
 interface ModificationReviewProps {
@@ -39,23 +43,63 @@ function formatAction(action: string): string {
 async function navigateToParagraph(loc: string) {
   try {
     await Word.run(async (context: Word.RequestContext) => {
-      const match = loc.match(/^p(\d+)$/);
-      if (!match) return;
+      const regularMatch = loc.match(/^p(\d+)$/);
+      const tableMatch = loc.match(/^t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
 
-      const paragraphIndex = parseInt(match[1]);
-      const paragraphs = context.document.body.paragraphs;
-      paragraphs.load("items");
-      await context.sync();
+      if (regularMatch) {
+        const paragraphIndex = parseInt(regularMatch[1]);
+        const paragraphs = context.document.body.paragraphs;
+        paragraphs.load("items");
+        await context.sync();
 
-      if (paragraphIndex < 0 || paragraphIndex >= paragraphs.items.length) return;
+        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.items.length) return;
 
-      const paragraph = paragraphs.items[paragraphIndex];
-      const range = paragraph.getRange("Content");
-      range.select();
-      await context.sync();
+        const paragraph = paragraphs.items[paragraphIndex];
+        const range = paragraph.getRange("Content");
+        range.select();
+        await context.sync();
+      } else if (tableMatch) {
+        const [, t, r, c, p] = tableMatch;
+        const tableIndex = parseInt(t);
+        const rowIndex = parseInt(r);
+        const colIndex = parseInt(c);
+        const paraIndex = parseInt(p);
+
+        const tables = context.document.body.tables;
+        tables.load("items");
+        await context.sync();
+
+        if (tableIndex < 0 || tableIndex >= tables.items.length) return;
+
+        const table = tables.items[tableIndex];
+        table.load("rowCount");
+        table.rows.load("items");
+        await context.sync();
+
+        if (rowIndex < 0 || rowIndex >= table.rows.items.length) return;
+
+        const row = table.rows.items[rowIndex];
+        row.load("cellCount");
+        row.cells.load("items");
+        await context.sync();
+
+        if (colIndex < 0 || colIndex >= row.cells.items.length) return;
+
+        const cell = row.cells.items[colIndex];
+        const cellParas = cell.body.paragraphs;
+        cellParas.load("items");
+        await context.sync();
+
+        if (paraIndex < 0 || paraIndex >= cellParas.items.length) return;
+
+        const paragraph = cellParas.items[paraIndex];
+        const range = paragraph.getRange("Content");
+        range.select();
+        await context.sync();
+      }
     });
   } catch (error) {
-    console.error(`Error navigating to paragraph ${loc}:`, error);
+    console.error(`Error navigating to ${loc}:`, error);
   }
 }
 
@@ -131,9 +175,71 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
       }))
       .filter((mod) => selectedMods.includes(mod.originalIndex))
       .sort((a, b) => {
-        const aNum = parseInt(a.loc?.match(/^p(\d+)$/)?.[1] || "0");
-        const bNum = parseInt(b.loc?.match(/^p(\d+)$/)?.[1] || "0");
-        return bNum - aNum;
+        // Classify operation types
+        const getOperationType = (mod: typeof a): "paragraph" | "table_cell" | "table_row" => {
+          if (mod.action === "delete_row" || mod.action === "insert_row") {
+            return "table_row";
+          }
+          if (mod.loc?.match(/^t\d+\.r\d+\.c\d+\.p\d+$/)) {
+            return "table_cell";
+          }
+          return "paragraph";
+        };
+
+        const aType = getOperationType(a);
+        const bType = getOperationType(b);
+
+        // Priority: paragraph operations first, then table_cell, then table_row
+        const typePriority = { paragraph: 0, table_cell: 1, table_row: 2 };
+        if (typePriority[aType] !== typePriority[bType]) {
+          return typePriority[aType] - typePriority[bType];
+        }
+
+        // Within same type, sort by location
+        const parseLocation = (loc: string | undefined): number[] => {
+          if (!loc) return [0];
+
+          const regularMatch = loc.match(/^p(\d+)$/);
+          if (regularMatch) {
+            return [parseInt(regularMatch[1])];
+          }
+
+          const tableCellMatch = loc.match(/^t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
+          if (tableCellMatch) {
+            const [, t, r, c, p] = tableCellMatch;
+            return [parseInt(t), parseInt(r), parseInt(c), parseInt(p)];
+          }
+
+          const tableRowMatch = loc.match(/^t(\d+)\.r(\d+)(?:\.after)?$/);
+          if (tableRowMatch) {
+            const [, t, r] = tableRowMatch;
+            return [parseInt(t), parseInt(r)];
+          }
+
+          return [0];
+        };
+
+        const aKeys = parseLocation(a.loc);
+        const bKeys = parseLocation(b.loc);
+
+        // Compare lexicographically in reverse order (descending)
+        for (let i = 0; i < Math.max(aKeys.length, bKeys.length); i++) {
+          const aKey = aKeys[i] ?? 0;
+          const bKey = bKeys[i] ?? 0;
+          if (aKey !== bKey) {
+            return bKey - aKey;
+          }
+        }
+
+        // If locations are identical, sort by withinPara occurrence in descending order
+        // (higher occurrence executes first to avoid invalidating earlier occurrences)
+        const aOccurrence = a.withinPara?.occurrence ?? -1;
+        const bOccurrence = b.withinPara?.occurrence ?? -1;
+        if (aOccurrence !== bOccurrence) {
+          return bOccurrence - aOccurrence;
+        }
+
+        return 0;
       });
 
     const newErrors: Record<number, string> = {};
