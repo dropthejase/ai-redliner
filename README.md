@@ -79,6 +79,81 @@ The frontend needs no changes. Type anything in the taskpane and it will receive
 
 ---
 
+## How it works
+
+### Architecture
+
+```text
+┌───────────────────────┐
+│   Word Add-in (React) │  ← User types message, reviews proposed changes
+│   Office.js taskpane  │
+└───────────┬───────────┘
+            │ HTTPS
+            │ POST /invoke (streams SSE)
+            │ GET /sessions, DELETE /sessions/{id}
+┌───────────▼───────────┐
+│  FastAPI Backend      │  ← Strands Agent + in-memory cache + FileSessionManager
+│  (Python, port 8000)  │
+└───────────┬───────────┘
+            │ HTTPS
+            │ Anthropic Messages API
+┌───────────▼───────────┐
+│   Claude API          │  ← Model inference, tool use, streaming
+│   (claude-4.5-*)      │
+└───────────────────────┘
+```
+
+### Data flow (one request)
+
+1. **User sends message** → Frontend extracts Word paragraphs (`p0`, `p1`, `p2`...), computes MD5 hash, wraps user input + doc in XML tags
+2. **POST /invoke** → Backend looks up or creates Agent for session ID, calls `agent.stream(prompt)`
+3. **Agent streams events** → Backend filters Strands events, emits SSE: `content` (text chunks), `tool_use` (badge), `microsoft_actions` (proposed changes), `end_turn`
+4. **Frontend renders** → Text appends to assistant bubble, actions populate ModificationReview panel
+5. **User clicks Apply** → Frontend re-reads doc, checks hash, executes selected actions via Office.js with change tracking on
+6. **Word shows redlines** → Approved changes appear as tracked changes in the document
+
+### microsoft_actions tool format
+
+The agent calls `microsoft_actions_tool` with JSON. Each action:
+
+```json
+{
+  "action": "replace",           // replace | append | prepend | delete | highlight | format_bold | format_italic | strikethrough
+  "loc": "p3",                   // paragraph index (p0, p1, p2...)
+  "new_text": "Updated text.",   // required for replace/append/prepend, omitted for delete/formatting
+  "reasoning": "Why this change" // shown to user in UI
+}
+```
+
+**Example multi-action payload:**
+
+```json
+{
+  "modifications": [
+    {
+      "action": "replace",
+      "loc": "p0",
+      "new_text": "Confidentiality Agreement",
+      "reasoning": "Updated title"
+    },
+    {
+      "action": "highlight",
+      "loc": "p5",
+      "reasoning": "Vague term needs review"
+    },
+    {
+      "action": "delete",
+      "loc": "p8",
+      "reasoning": "Obsolete clause"
+    }
+  ]
+}
+```
+
+Actions currently target **entire paragraphs**. Future enhancement: sub-paragraph targeting via `withinPara: {find: str, occurrence: int}`.
+
+---
+
 ## Debugging
 
 ### Backend logs
