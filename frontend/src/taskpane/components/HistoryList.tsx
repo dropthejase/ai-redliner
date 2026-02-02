@@ -1,6 +1,6 @@
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
-import { ChevronRight, MessageSquare } from "lucide-react";
+import { ChevronRight, MessageSquare, Trash2 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useChatAPI, SessionSummary } from "./useChatAPI";
 import { mapMessages, RenderedMessage } from "./sessionUtils";
@@ -21,13 +21,14 @@ interface HistoryListProps {
 }
 
 const HistoryList: React.FC<HistoryListProps> = ({ onContinue }) => {
-  const { fetchSessions, fetchMessages } = useChatAPI();
+  const { fetchSessions, fetchMessages, deleteSession } = useChatAPI();
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [expandedSession, setExpandedSession] = React.useState<string | null>(null);
   const [sessionMessages, setSessionMessages] = React.useState<Record<string, RenderedMessage[]>>({});
   const [loadingMessages, setLoadingMessages] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     fetchSessions()
@@ -58,6 +59,39 @@ const HistoryList: React.FC<HistoryListProps> = ({ onContinue }) => {
     }
   };
 
+  const handleDeleteClick = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmingDelete(sessionId);
+  };
+
+  const handleConfirmDelete = async (sessionId: string) => {
+    try {
+      await deleteSession(sessionId);
+      setSessions((prev) => prev.filter((s) => s.session_id !== sessionId));
+
+      // Clear from message cache
+      setSessionMessages((prev) => {
+        const copy = { ...prev };
+        delete copy[sessionId];
+        return copy;
+      });
+
+      // Collapse if this session was expanded
+      if (expandedSession === sessionId) {
+        setExpandedSession(null);
+      }
+
+      setConfirmingDelete(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete session");
+      setConfirmingDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmingDelete(null);
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
@@ -84,6 +118,30 @@ const HistoryList: React.FC<HistoryListProps> = ({ onContinue }) => {
 
   return (
     <div className="flex flex-col gap-2 pr-1">
+      {/* Delete confirmation modal */}
+      {confirmingDelete && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card border border-border rounded-lg p-5 w-80 mx-4 shadow-lg">
+            <h3 className="text-sm font-semibold text-foreground mb-2">Delete conversation?</h3>
+            <p className="text-xs text-muted-foreground mb-4">This cannot be undone.</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={handleCancelDelete}
+                className="text-xs px-4 py-1.5 rounded-md border border-border text-foreground hover:bg-card-foreground/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmDelete(confirmingDelete)}
+                className="text-xs px-4 py-1.5 rounded-md bg-foreground text-background hover:bg-foreground/90 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {sessions.map((session) => {
         const isExpanded = expandedSession === session.session_id;
         const messages = sessionMessages[session.session_id];
@@ -106,6 +164,13 @@ const HistoryList: React.FC<HistoryListProps> = ({ onContinue }) => {
               <span className="text-xs text-muted-foreground shrink-0 font-mono">
                 {session.session_id.slice(0, 8)}
               </span>
+              <button
+                onClick={(e) => handleDeleteClick(session.session_id, e)}
+                className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                title="Delete conversation"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
 
             {/* Expanded message thread */}

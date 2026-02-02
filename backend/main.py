@@ -28,7 +28,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://localhost:3000"],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "x-session-id"],
 )
 
@@ -261,3 +261,22 @@ async def get_session_messages(session_id: str):
 
     messages.sort(key=lambda m: m["message_id"])
     return {"messages": messages}
+
+
+@app.delete("/sessions/{session_id}")
+async def delete_session(session_id: str):
+    import shutil
+
+    session_dir = os.path.join("sessions/", f"session_{session_id}")
+
+    # Evict from in-memory cache if present
+    if session_id in _agent_cache:
+        del _agent_cache[session_id]
+
+    # Remove from disk
+    if os.path.isdir(session_dir):
+        shutil.rmtree(session_dir)
+        logger.info(f"Deleted session: {session_id}")
+        return {"deleted": True, "session_id": session_id}
+
+    return {"deleted": False, "session_id": session_id, "error": "Session not found"}

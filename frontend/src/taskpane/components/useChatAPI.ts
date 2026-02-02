@@ -98,5 +98,12 @@ export const useChatAPI = () => {
     return data.messages as PersistedMessage[];
   }, []);
 
-  return { sendMessage, error, fetchSessions, fetchMessages };
+  const deleteSession = useCallback(async (id: string): Promise<void> => {
+    const response = await fetch(`https://localhost:8000/sessions/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error(`Failed to delete session: ${response.status}`);
+  }, []);
+
+  return { sendMessage, error, fetchSessions, fetchMessages, deleteSession };
 };
