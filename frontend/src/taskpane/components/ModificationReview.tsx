@@ -13,12 +13,13 @@ interface Action {
 
 interface ModificationReviewProps {
   modifications: Action[];
-  onApply: (appliedIndices: number[], rejectedIndices: number[]) => void;
+  onApply: (appliedIndices: number[], rejectedIndices: number[], hashMismatch?: boolean) => void;
   disabled: boolean;
   appliedIndices?: number[];
   rejectedIndices?: number[];
   documentHashWhenSent?: string | null;
   onHashMismatch?: () => void;
+  expandedByDefault?: boolean;
 }
 
 function simpleHash(str: string): string {
@@ -66,16 +67,23 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
   rejectedIndices = [],
   documentHashWhenSent,
   onHashMismatch,
+  expandedByDefault,
 }) => {
-  const [expanded, setExpanded] = React.useState(!disabled);
+  const [expanded, setExpanded] = React.useState(expandedByDefault ?? !disabled);
   const [selectedMods, setSelectedMods] = React.useState<number[]>(
     modifications.map((_, i) => i)
   );
   const [expandedMods, setExpandedMods] = React.useState<number[]>([]);
+  const [editedTexts, setEditedTexts] = React.useState<Record<number, string>>({});
   const [errors, setErrors] = React.useState<Record<number, string>>({});
   const [successes, setSuccesses] = React.useState<Record<number, boolean>>({});
 
+  const mountedRef = React.useRef(false);
   React.useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     if (disabled) setExpanded(false);
   }, [disabled]);
 
@@ -97,7 +105,7 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
     setExpandedMods((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
     );
-    if (!expandedMods.includes(index) && modifications[index].loc) {
+    if (!disabled && !expandedMods.includes(index) && modifications[index].loc) {
       navigateToParagraph(modifications[index].loc);
     }
   };
@@ -110,14 +118,17 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
 
       if (currentHash !== documentHashWhenSent) {
         if (onHashMismatch) onHashMismatch();
-        setExpanded(false);
-        onApply([], modifications.map((_, i) => i));
+        onApply([], modifications.map((_, i) => i), true);
         return;
       }
     }
 
     const modsToApply = modifications
-      .map((mod, i) => ({ ...mod, originalIndex: i }))
+      .map((mod, i) => ({
+        ...mod,
+        ...(i in editedTexts ? { new_text: editedTexts[i] } : {}),
+        originalIndex: i,
+      }))
       .filter((mod) => selectedMods.includes(mod.originalIndex))
       .sort((a, b) => {
         const aNum = parseInt(a.loc?.match(/^p(\d+)$/)?.[1] || "0");
@@ -172,22 +183,22 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
             Proposed Changes{hasErrors ? " (errors present)" : ""}
           </span>
         </div>
-        <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-            onClick={handleToggleAll}
-            disabled={disabled}
-          >
-            {selectedMods.length === modifications.length ? "Deselect All" : "Select All"}
-          </button>
-          <button
-            className="text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-            onClick={handleApply}
-            disabled={disabled}
-          >
-            Apply
-          </button>
-        </div>
+        {!disabled && (
+          <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="text-xs text-primary hover:underline"
+              onClick={handleToggleAll}
+            >
+              {selectedMods.length === modifications.length ? "Deselect All" : "Select All"}
+            </button>
+            <button
+              className="text-xs text-primary hover:underline"
+              onClick={handleApply}
+            >
+              Apply
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -236,10 +247,20 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
                     <div className="font-semibold text-muted-foreground mb-1">
                       {formatAction(mod.action)}{mod.action !== "delete" ? " with..." : ""}
                     </div>
-                    {mod.new_text && (
-                      <div className="bg-muted rounded px-2 py-1.5 whitespace-pre-wrap break-words text-foreground">
-                        {mod.new_text}
-                      </div>
+                    {(mod.new_text || i in editedTexts) && (
+                      disabled ? (
+                        <div className="bg-muted rounded px-2 py-1.5 whitespace-pre-wrap break-words text-foreground">
+                          {mod.new_text}
+                        </div>
+                      ) : (
+                        <textarea
+                          className="w-full bg-muted rounded px-2 py-1.5 text-foreground text-xs resize-none border border-transparent focus:border-primary focus:outline-none"
+                          rows={Math.max(2, (editedTexts[i] ?? mod.new_text ?? "").split("\n").length)}
+                          value={editedTexts[i] ?? mod.new_text ?? ""}
+                          onChange={(e) => setEditedTexts((prev) => ({ ...prev, [i]: e.target.value }))}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )
                     )}
                     {errors[i] && (
                       <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-destructive">

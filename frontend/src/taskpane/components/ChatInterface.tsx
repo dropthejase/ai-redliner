@@ -26,6 +26,7 @@ interface Message {
   appliedIndices?: number[];
   rejectedIndices?: number[];
   rejected?: boolean;
+  hashMismatch?: boolean;
 }
 
 function simpleHash(str: string): string {
@@ -53,11 +54,6 @@ const ChatInterface: React.FC = () => {
   const [pendingActions, setPendingActions] = React.useState<Action[]>([]);
   const [documentHashWhenSent, setDocumentHashWhenSent] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-
-  const pendingActionsRef = React.useRef<Action[]>([]);
-  React.useEffect(() => {
-    pendingActionsRef.current = pendingActions;
-  }, [pendingActions]);
 
   const { sendMessage } = useChatAPI();
 
@@ -93,36 +89,35 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const handleApplyModifications = (appliedIndices: number[], rejectedIndices: number[]) => {
+  const handleApplyModifications = (appliedIndices: number[], rejectedIndices: number[], hashMismatch = false) => {
     setMessages((prev) => [
       ...prev,
       {
         role: "action_history",
-        actions: pendingActionsRef.current,
+        actions: pendingActions,
         actedUpon: true,
         appliedIndices,
         rejectedIndices,
+        hashMismatch,
       },
     ]);
     setPendingActions([]);
-    pendingActionsRef.current = [];
   };
 
   const handleSendMessage = async (inputValue: string) => {
     try {
       // Auto-reject pending actions when user sends a new message
-      if (pendingActionsRef.current.length > 0) {
+      if (pendingActions.length > 0) {
         setMessages((prev) => [
           ...prev,
           {
             role: "action_history",
-            actions: pendingActionsRef.current,
+            actions: pendingActions,
             actedUpon: true,
             rejected: true,
           },
         ]);
         setPendingActions([]);
-        pendingActionsRef.current = [];
       }
 
       const isEmpty = await isDocumentEmpty();

@@ -20,6 +20,7 @@ interface Message {
   appliedIndices?: number[];
   rejectedIndices?: number[];
   rejected?: boolean;
+  hashMismatch?: boolean;
 }
 
 interface ChatMessageListProps {
@@ -70,6 +71,7 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
                 msg.rejectedIndices ||
                 (msg.rejected ? msg.actions.map((_, i) => i) : [])
               }
+              expandedByDefault={msg.hashMismatch}
             />
           )}
 

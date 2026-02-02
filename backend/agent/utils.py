@@ -38,3 +38,73 @@ def remove_thinking_tags(response_str):
         thinking_end = response_str.find("</thinking>") + len("</thinking>")
         return response_str[:thinking_start] + response_str[thinking_end:]
     return response_str
+
+
+async def mock_stream(word_document: str):
+    """Hardcoded SSE sequence for local frontend testing. No API key required.
+    Exercises every microsoft_action type once."""
+    import asyncio
+
+    # 1. Conversational text (streamed in two chunks to simulate batching)
+    yield {"type": "content", "data": "Sure! Here's "}
+    await asyncio.sleep(0.3)
+    yield {"type": "content", "data": "a demo of every action type."}
+    await asyncio.sleep(0.3)
+
+    # 2. Tool badge
+    yield {"type": "tool_use", "tool_name": "microsoft_actions_tool"}
+    await asyncio.sleep(0.4)
+
+    # 3. One of each action type
+    yield {
+        "type": "microsoft_actions",
+        "actions": [
+            {
+                "task": "Rename recipe title",
+                "action": "replace",
+                "loc": "p0",
+                "new_text": "Cookies",
+            },
+            {
+                "task": "Append to abstract",
+                "action": "append",
+                "loc": "p2",
+                "new_text": " A classic homemade recipe.",
+            },
+            {
+                "task": "Prepend to ingredients",
+                "action": "prepend",
+                "loc": "p4",
+                "new_text": "You will need: ",
+            },
+            {
+                "task": "Delete steps placeholder",
+                "action": "delete",
+                "loc": "p6",
+            },
+            {
+                "task": "Highlight the abstract heading",
+                "action": "highlight",
+                "loc": "p1",
+            },
+            {
+                "task": "Bold the ingredients heading",
+                "action": "format_bold",
+                "loc": "p3",
+            },
+            {
+                "task": "Italicise the steps heading",
+                "action": "format_italic",
+                "loc": "p5",
+            },
+            {
+                "task": "Strikethrough the abstract placeholder",
+                "action": "strikethrough",
+                "loc": "p2",
+            },
+        ],
+    }
+    await asyncio.sleep(0.3)
+
+    # 4. End turn
+    yield {"type": "end_turn"}
