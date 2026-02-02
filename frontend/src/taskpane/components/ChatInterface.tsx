@@ -3,6 +3,7 @@ import { AlertCircle, X, RotateCcw } from "lucide-react";
 import ChatInput from "./ChatInput";
 import ChatMessageList from "./ChatMessageList";
 import { useChatAPI } from "./useChatAPI";
+import { mapMessages } from "./sessionUtils";
 import {
   getWordDocumentContent,
   getSelectedText,
@@ -48,14 +49,58 @@ const INITIAL_MESSAGE: Message = {
   ],
 };
 
-const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  selectedModel: string;
+  sessionId: string;
+  onNewSession: () => void;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId, onNewSession }) => {
   const [messages, setMessages] = React.useState<Message[]>([INITIAL_MESSAGE]);
   const [loading, setLoading] = React.useState(false);
   const [pendingActions, setPendingActions] = React.useState<Action[]>([]);
   const [documentHashWhenSent, setDocumentHashWhenSent] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const prevModelRef = React.useRef(selectedModel);
 
-  const { sendMessage } = useChatAPI();
+  const { sendMessage, fetchMessages } = useChatAPI();
+
+  // Model changed — start a fresh session
+  React.useEffect(() => {
+    if (selectedModel !== prevModelRef.current) {
+      prevModelRef.current = selectedModel;
+      onNewSession();
+    }
+  }, [selectedModel, onNewSession]);
+
+  // Session ID changed (either from model reset or Continue from history),
+  // or initial mount. Always fetch — new sessions return empty and fall back to INITIAL_MESSAGE.
+  React.useEffect(() => {
+    setPendingActions([]);
+    setDocumentHashWhenSent(null);
+    setErrorMessage(null);
+
+    fetchMessages(sessionId)
+      .then((persisted) => {
+        const mapped = mapMessages(persisted);
+        if (mapped.length === 0) {
+          setMessages([INITIAL_MESSAGE]);
+        } else {
+          setMessages(mapped.map((m) => {
+            if (m.type === "proposed_changes") {
+              return {
+                role: "proposed_changes_history",
+                content: [{ text: `${m.changeCount} proposed change${m.changeCount !== 1 ? "s" : ""}` }],
+              };
+            }
+            return { role: m.type, content: [{ text: m.text! }] };
+          }));
+        }
+      })
+      .catch(() => {
+        setMessages([INITIAL_MESSAGE]);
+      });
+  }, [sessionId, fetchMessages]);
 
   const handleChatResponse = (data: Record<string, unknown>) => {
     const type = data.type as string;
@@ -138,10 +183,12 @@ const ChatInterface: React.FC = () => {
       setLoading(true);
 
       await sendMessage(
+        sessionId,
         {
           prompt: inputValue,
           word_document: documentContent,
           highlighted: selectedText || "",
+          model: selectedModel,
         },
         handleChatResponse
       );

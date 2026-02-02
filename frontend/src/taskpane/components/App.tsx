@@ -1,18 +1,67 @@
 import * as React from "react";
+import { cn } from "../lib/utils";
 import ChatInterface from "./ChatInterface";
+import HistoryList from "./HistoryList";
+import Settings, { getStoredModel, setStoredModel, ModelId } from "./Settings";
+
+type Page = "chat" | "history" | "settings";
+
+const TABS: { key: Page; label: string }[] = [
+  { key: "chat", label: "Chat" },
+  { key: "history", label: "History" },
+  { key: "settings", label: "Settings" },
+];
 
 const App: React.FC = () => {
+  const [page, setPage] = React.useState<Page>("chat");
+  const [selectedModel, setSelectedModel] = React.useState<ModelId>(getStoredModel);
+  const [sessionId, setSessionId] = React.useState<string>(() => crypto.randomUUID());
+
+  const handleModelChange = (id: ModelId) => {
+    setStoredModel(id);
+    setSelectedModel(id);
+  };
+
+  const handleContinueSession = (id: string) => {
+    setSessionId(id);
+    setPage("chat");
+  };
+
+  const handleNewSession = () => {
+    setSessionId(crypto.randomUUID());
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="shrink-0 px-4 pt-5 pb-3">
+      <div className="shrink-0 px-4 pt-5 pb-2">
         <h1 className="text-lg font-semibold text-foreground tracking-tight">Redliner</h1>
         <p className="text-xs text-muted-foreground mt-0.5">AI-powered document assistant</p>
       </div>
 
-      {/* Chat area */}
+      {/* Tab bar */}
+      <div className="shrink-0 flex gap-1 px-4 pb-3">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setPage(tab.key)}
+            className={cn(
+              "text-xs font-medium px-3 py-1 rounded-full transition-colors",
+              page === tab.key
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-card-foreground/10"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Page content */}
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 gap-3">
-        <ChatInterface />
+        {page === "chat" && <ChatInterface selectedModel={selectedModel} sessionId={sessionId} onNewSession={handleNewSession} />}
+        {page === "history" && <HistoryList onContinue={handleContinueSession} />}
+        {page === "settings" && <Settings selectedModel={selectedModel} onModelChange={handleModelChange} />}
       </div>
     </div>
   );

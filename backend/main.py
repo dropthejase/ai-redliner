@@ -28,20 +28,20 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://localhost:3000"],
-    allow_methods=["POST"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "x-session-id"],
 )
 
-# Model — stateless client wrapper, created once (skipped in mock mode)
-if not MOCK_MODE:
-    model = AnthropicModel(
-        client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
-        max_tokens=1028,
-        model_id="claude-haiku-4-5-20251001",
-    )
+DEFAULT_MODEL_ID = "claude-haiku-4-5"
 
-# In-memory agent cache: session_id -> Agent
-_agent_cache: dict[str, Agent] = {}
+ALLOWED_MODEL_IDS = {
+    "claude-haiku-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-5",
+}
+
+# In-memory agent cache: session_id -> (Agent, model_id)
+_agent_cache: dict[str, tuple[Agent, str]] = {}
 
 
 @tool
@@ -59,10 +59,24 @@ def microsoft_actions_tool(actions: str) -> str:
     return "Action submitted successfully. It is for the user to decide whether to accept or decline your proposed change. DO NOT RESPOND FURTHER."
 
 
-def get_or_create_agent(session_id: str) -> Agent:
+def get_or_create_agent(session_id: str, model_id: str) -> Agent:
     if session_id in _agent_cache:
-        return _agent_cache[session_id]
+        cached_agent, cached_model_id = _agent_cache[session_id]
+        if cached_model_id != model_id:
+            # Swap the model in place — keeps session history intact
+            cached_agent.model = AnthropicModel(
+                client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
+                max_tokens=1028,
+                model_id=model_id,
+            )
+            _agent_cache[session_id] = (cached_agent, model_id)
+        return cached_agent
 
+    model = AnthropicModel(
+        client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
+        max_tokens=1028,
+        model_id=model_id,
+    )
     session_manager = FileSessionManager(
         session_id=session_id,
         storage_dir="sessions/",
@@ -76,7 +90,7 @@ def get_or_create_agent(session_id: str) -> Agent:
         tools=[microsoft_actions_tool],
         session_manager=session_manager,
     )
-    _agent_cache[session_id] = agent
+    _agent_cache[session_id] = (agent, model_id)
     return agent
 
 
@@ -175,15 +189,19 @@ async def invoke(request: Request):
     user_input = body.get("prompt", "")
     word_document = body.get("word_document", "")
     highlighted = body.get("highlighted", "")
+    model_id = body.get("model", DEFAULT_MODEL_ID)
 
-    logger.info("Session: %s | Prompt length: %d | Document length: %d",
-                session_id, len(user_input), len(word_document))
+    if model_id not in ALLOWED_MODEL_IDS:
+        model_id = DEFAULT_MODEL_ID
+
+    logger.info("Session: %s | Model: %s | Prompt length: %d | Document length: %d",
+                session_id, model_id, len(user_input), len(word_document))
 
     if MOCK_MODE:
         logger.info("MOCK MODE — returning hardcoded response")
 
         async def mock_sse():
-            async for event in mock_stream(word_document):
+            async for event in mock_stream(word_document, model_id):
                 yield f"data: {json.dumps(event)}\n\n"
 
         return StreamingResponse(mock_sse(), media_type="text/event-stream")
@@ -195,7 +213,7 @@ async def invoke(request: Request):
 
     user_message = f"<word_document>{word_document}</word_document>\n{highlighted_section}\n<user_input>{user_input}</user_input>"
 
-    agent = get_or_create_agent(session_id)
+    agent = get_or_create_agent(session_id, model_id)
 
     async def sse_stream():
         async for event in stream_agent_response(agent, user_message):
@@ -205,3 +223,41 @@ async def invoke(request: Request):
         sse_stream(),
         media_type="text/event-stream",
     )
+
+
+@app.get("/sessions")
+async def list_sessions():
+    sessions_dir = "sessions/"
+    results = []
+    if not os.path.isdir(sessions_dir):
+        return {"sessions": []}
+
+    for entry in os.listdir(sessions_dir):
+        session_json = os.path.join(sessions_dir, entry, "session.json")
+        if os.path.isfile(session_json):
+            with open(session_json) as f:
+                data = json.load(f)
+            results.append({
+                "session_id": data["session_id"],
+                "created_at": data["created_at"],
+            })
+
+    results.sort(key=lambda s: s["created_at"], reverse=True)
+    return {"sessions": results}
+
+
+@app.get("/sessions/{session_id}/messages")
+async def get_session_messages(session_id: str):
+    messages_dir = os.path.join("sessions/", f"session_{session_id}", "agents", "agent_default", "messages")
+    if not os.path.isdir(messages_dir):
+        return {"messages": []}
+
+    messages = []
+    for filename in os.listdir(messages_dir):
+        if filename.startswith("message_") and filename.endswith(".json"):
+            with open(os.path.join(messages_dir, filename)) as f:
+                data = json.load(f)
+            messages.append(data)
+
+    messages.sort(key=lambda m: m["message_id"])
+    return {"messages": messages}

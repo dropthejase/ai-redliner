@@ -75,6 +75,15 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
             />
           )}
 
+          {/* Historical proposed changes pill (from continued sessions) */}
+          {msg.role === "proposed_changes_history" && msg.content && (
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-1.5 bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full">
+                {msg.content[0].text}
+              </div>
+            </div>
+          )}
+
           {/* Chat bubbles */}
           {(msg.role === "user" || msg.role === "assistant") &&
             msg.content &&

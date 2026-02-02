@@ -40,12 +40,14 @@ def remove_thinking_tags(response_str):
     return response_str
 
 
-async def mock_stream(word_document: str):
+async def mock_stream(word_document: str, model_id: str = "unknown"):
     """Hardcoded SSE sequence for local frontend testing. No API key required.
     Exercises every microsoft_action type once."""
     import asyncio
 
-    # 1. Conversational text (streamed in two chunks to simulate batching)
+    # 1. Conversational text (streamed in chunks to simulate batching)
+    yield {"type": "content", "data": f"This is {model_id}. "}
+    await asyncio.sleep(0.3)
     yield {"type": "content", "data": "Sure! Here's "}
     await asyncio.sleep(0.3)
     yield {"type": "content", "data": "a demo of every action type."}
