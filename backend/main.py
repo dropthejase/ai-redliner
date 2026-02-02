@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from strands import Agent, tool
 from strands.models.anthropic import AnthropicModel
+from strands.types.content import SystemContentBlock
 from strands.session.file_session_manager import FileSessionManager
 from agent.prompts import REDLINER_PROMPT
 from agent.utils import remove_thinking_tags, convert_from_placeholders, convert_to_placeholders
@@ -35,6 +36,7 @@ app.add_middleware(
 if not MOCK_MODE:
     model = AnthropicModel(
         client_args={"api_key": os.environ["ANTHROPIC_API_KEY"]},
+        max_tokens=1028,
         model_id="claude-haiku-4-5-20251001",
     )
 
@@ -67,7 +69,10 @@ def get_or_create_agent(session_id: str) -> Agent:
     )
     agent = Agent(
         model=model,
-        system_prompt=REDLINER_PROMPT,
+        system_prompt=[
+            SystemContentBlock(text=REDLINER_PROMPT),
+            SystemContentBlock(cachePoint={"type": "default"}),
+        ],
         tools=[microsoft_actions_tool],
         session_manager=session_manager,
     )
