@@ -118,10 +118,11 @@ The agent calls `microsoft_actions_tool` with JSON. Each action:
 
 ```json
 {
-  "action": "replace",           // replace | append | prepend | delete | highlight | format_bold | format_italic | strikethrough
-  "loc": "p3",                   // paragraph index (p0, p1, p2...)
-  "new_text": "Updated text.",   // required for replace/append/prepend, omitted for delete/formatting
-  "reasoning": "Why this change" // shown to user in UI
+  "task": "Brief description",   // Short description shown to user
+  "action": "replace",            // replace | append | prepend | delete | highlight | format_bold | format_italic | strikethrough | delete_row | insert_row
+  "loc": "p3",                    // paragraph index (p0, p1, p2...) or table cell (t0.r1.c0.p0) or table row (t0.r1)
+  "new_text": "Updated text.",    // required for replace/append/prepend, omitted for delete/formatting
+  "rowData": [["col1", "col2"]]   // optional for insert_row: array of rows, each row is array of cell contents
 }
 ```
 
@@ -131,26 +132,26 @@ The agent calls `microsoft_actions_tool` with JSON. Each action:
 {
   "modifications": [
     {
+      "task": "Update document title",
       "action": "replace",
       "loc": "p0",
-      "new_text": "Confidentiality Agreement",
-      "reasoning": "Updated title"
+      "new_text": "Confidentiality Agreement"
     },
     {
+      "task": "Highlight vague term",
       "action": "highlight",
-      "loc": "p5",
-      "reasoning": "Vague term needs review"
+      "loc": "p5"
     },
     {
+      "task": "Remove obsolete clause",
       "action": "delete",
-      "loc": "p8",
-      "reasoning": "Obsolete clause"
+      "loc": "p8"
     }
   ]
 }
 ```
 
-Actions currently target **entire paragraphs**. Future enhancement: sub-paragraph targeting via `withinPara: {find: str, occurrence: int}`.
+Actions support **table cells**, **within-paragraph edits** via `withinPara: {find: str, occurrence: int}`, and **row operations**. See [TABLES_AND_GRANULAR_EDITS.md](./TABLES_AND_GRANULAR_EDITS.md) for details.
 
 ---
 
@@ -187,6 +188,10 @@ t0.r1.c1.p0: Data cell 2
 p5: Text after table
 ```
 
+**Paragraph Numbering:** Regular paragraphs are numbered by their global position in the document. In the example above, `p0` is at position 0, the table cells occupy positions 1-4, so `p5` is the next paragraph at position 5.
+
+**Cell Paragraphs:** The `p` in `t{n}.r{r}.c{c}.p{p}` represents the paragraph index within that specific cell (starting from 0 for each cell).
+
 This allows the agent to:
 
 - Understand table structure
@@ -222,16 +227,16 @@ The agent can insert or delete entire table rows:
 
 ```json
 {
+  "task": "Remove obsolete data",
   "action": "delete_row",
-  "loc": "t0.r2",
-  "reasoning": "Remove obsolete data"
+  "loc": "t0.r2"
 }
 
 {
+  "task": "Add missing row after header",
   "action": "insert_row",
-  "loc": "t0.r0.after",
-  "rowData": [["New cell 1", "New cell 2"]],
-  "reasoning": "Add missing row"
+  "loc": "t0.r0",
+  "rowData": [["New cell 1", "New cell 2"]]
 }
 ```
 

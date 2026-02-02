@@ -210,7 +210,7 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
             return [parseInt(t), parseInt(r), parseInt(c), parseInt(p)];
           }
 
-          const tableRowMatch = loc.match(/^t(\d+)\.r(\d+)(?:\.after)?$/);
+          const tableRowMatch = loc.match(/^t(\d+)\.r(\d+)$/);
           if (tableRowMatch) {
             const [, t, r] = tableRowMatch;
             return [parseInt(t), parseInt(r)];

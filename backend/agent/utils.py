@@ -121,7 +121,7 @@ async def mock_stream(word_document: str, model_id: str = "unknown"):
             {
                 "task": "Insert new row after row 2",
                 "action": "insert_row",
-                "loc": "t0.r2.after",
+                "loc": "t0.r2",
                 "rowData": [["Inserted cell 1", "Inserted cell 2"]],
             },
             # 7. Within-paragraph edit in regular paragraph
