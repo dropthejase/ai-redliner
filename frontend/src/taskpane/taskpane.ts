@@ -55,7 +55,9 @@ async function createParagraphMapping(): Promise<Record<string, string>> {
     const cellParaCounters = new Map<string, number>();
 
     // Debug: Build raw paragraph list
-    const rawParaList = paragraphs.items.map((p, i) => `p${i}: ${p.text}`).join("\n");
+    const rawParaList = paragraphs.items
+      .map((p, i) => `p${i}: ${p.text}`)
+      .join("\n");
 
     for (let i = 0; i < paragraphs.items.length; i++) {
       const para = paragraphs.items[i];
@@ -94,7 +96,9 @@ async function createParagraphMapping(): Promise<Record<string, string>> {
     }
 
     // Debug: Log raw paragraph list
-    console.log("=== Paragraphs Only ===\n" + rawParaList + "\n" + "=".repeat(50));
+    console.log(
+      "=== Paragraphs Only ===\n" + rawParaList + "\n" + "=".repeat(50),
+    );
 
     return paragraphMapping;
   });
@@ -142,7 +146,7 @@ export async function getSelectedText(): Promise<string | null> {
 export async function resolveLocation(
   context: Word.RequestContext,
   loc: string,
-  withinPara?: { find: string; occurrence: number }
+  withinPara?: { find: string; occurrence: number },
 ): Promise<Word.Range> {
   // Parse location
   const regularMatch = loc.match(/^p(\d+)$/);
@@ -158,7 +162,9 @@ export async function resolveLocation(
     await context.sync();
 
     if (paragraphIndex < 0 || paragraphIndex >= paragraphs.items.length) {
-      throw new Error(`Paragraph index ${paragraphIndex} out of range (0-${paragraphs.items.length - 1})`);
+      throw new Error(
+        `Paragraph index ${paragraphIndex} out of range (0-${paragraphs.items.length - 1})`,
+      );
     }
 
     targetParagraph = paragraphs.items[paragraphIndex];
@@ -175,7 +181,9 @@ export async function resolveLocation(
     await context.sync();
 
     if (tableIndex < 0 || tableIndex >= tables.items.length) {
-      throw new Error(`Table index ${tableIndex} out of range (0-${tables.items.length - 1})`);
+      throw new Error(
+        `Table index ${tableIndex} out of range (0-${tables.items.length - 1})`,
+      );
     }
 
     const table = tables.items[tableIndex];
@@ -184,7 +192,9 @@ export async function resolveLocation(
     await context.sync();
 
     if (rowIndex < 0 || rowIndex >= table.rows.items.length) {
-      throw new Error(`Row index ${rowIndex} out of range for table ${tableIndex} (0-${table.rows.items.length - 1})`);
+      throw new Error(
+        `Row index ${rowIndex} out of range for table ${tableIndex} (0-${table.rows.items.length - 1})`,
+      );
     }
 
     const row = table.rows.items[rowIndex];
@@ -193,7 +203,9 @@ export async function resolveLocation(
     await context.sync();
 
     if (colIndex < 0 || colIndex >= row.cells.items.length) {
-      throw new Error(`Column index ${colIndex} out of range for table ${tableIndex} row ${rowIndex} (0-${row.cells.items.length - 1})`);
+      throw new Error(
+        `Column index ${colIndex} out of range for table ${tableIndex} row ${rowIndex} (0-${row.cells.items.length - 1})`,
+      );
     }
 
     const cell = row.cells.items[colIndex];
@@ -202,7 +214,9 @@ export async function resolveLocation(
     await context.sync();
 
     if (paraIndex < 0 || paraIndex >= cellParas.items.length) {
-      throw new Error(`Paragraph index ${paraIndex} out of range in table ${tableIndex} cell [${rowIndex},${colIndex}] (0-${cellParas.items.length - 1})`);
+      throw new Error(
+        `Paragraph index ${paraIndex} out of range in table ${tableIndex} cell [${rowIndex},${colIndex}] (0-${cellParas.items.length - 1})`,
+      );
     }
 
     targetParagraph = cellParas.items[paraIndex];
@@ -212,7 +226,10 @@ export async function resolveLocation(
 
   // If withinPara is specified, search within the paragraph
   if (withinPara) {
-    const searchResults = targetParagraph.search(withinPara.find, { matchCase: true, matchWholeWord: false });
+    const searchResults = targetParagraph.search(withinPara.find, {
+      matchCase: true,
+      matchWholeWord: false,
+    });
     searchResults.load("items");
     await context.sync();
 
@@ -220,8 +237,13 @@ export async function resolveLocation(
       throw new Error(`Search text "${withinPara.find}" not found in ${loc}`);
     }
 
-    if (withinPara.occurrence < 0 || withinPara.occurrence >= searchResults.items.length) {
-      throw new Error(`Occurrence ${withinPara.occurrence} out of range for "${withinPara.find}" in ${loc} (found ${searchResults.items.length} matches)`);
+    if (
+      withinPara.occurrence < 0 ||
+      withinPara.occurrence >= searchResults.items.length
+    ) {
+      throw new Error(
+        `Occurrence ${withinPara.occurrence} out of range for "${withinPara.find}" in ${loc} (found ${searchResults.items.length} matches)`,
+      );
     }
 
     return searchResults.items[withinPara.occurrence];
@@ -235,7 +257,9 @@ async function setTrackingMode(mode = "trackAll") {
   try {
     await Word.run(async (context: Word.RequestContext) => {
       context.document.changeTrackingMode =
-        mode === "disable" ? Word.ChangeTrackingMode.off : Word.ChangeTrackingMode.trackAll;
+        mode === "disable"
+          ? Word.ChangeTrackingMode.off
+          : Word.ChangeTrackingMode.trackAll;
       await context.sync();
     });
   } catch (error) {
