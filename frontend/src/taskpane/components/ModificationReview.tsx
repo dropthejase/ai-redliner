@@ -260,11 +260,20 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
     const applied = selectedMods;
     const rejected = modifications.map((_, i) => i).filter((i) => !selectedMods.includes(i));
 
-    setExpanded(false);
+    // If there are errors, keep panel expanded and auto-expand failed items
+    if (Object.keys(newErrors).length > 0) {
+      setExpanded(true);
+      setExpandedMods(Object.keys(newErrors).map(Number));
+    } else {
+      setExpanded(false);
+    }
+
     onApply(applied, rejected);
   };
 
   const hasErrors = Object.keys(errors).length > 0;
+  const errorCount = Object.keys(errors).length;
+  const successCount = Object.keys(successes).length;
 
   const getStatus = (i: number): "applied" | "rejected" | "error" | "pending" => {
     if (errors[i]) return "error";
@@ -286,7 +295,8 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
             className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", expanded && "rotate-90")}
           />
           <span className={cn("text-sm font-semibold", hasErrors ? "text-destructive" : "text-foreground")}>
-            Proposed Changes{hasErrors ? " (errors present)" : ""}
+            Proposed Changes
+            {hasErrors && ` (${errorCount} failed${successCount > 0 ? `, ${successCount} succeeded` : ""})`}
           </span>
         </div>
         {!disabled && (

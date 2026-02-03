@@ -2,7 +2,6 @@
 
 import { executeReplace } from "./microsoft-actions/replace";
 import { executeAppend } from "./microsoft-actions/append";
-import { executePrepend } from "./microsoft-actions/prepend";
 import { executeDelete } from "./microsoft-actions/delete";
 import { executeHighlight } from "./microsoft-actions/highlight";
 import { executeFormatBold } from "./microsoft-actions/format_bold";
@@ -265,9 +264,6 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
               break;
             case "append":
               await executeAppend(context, action, paragraphs);
-              break;
-            case "prepend":
-              await executePrepend(context, action, paragraphs);
               break;
             case "delete":
               await executeDelete(context, action, paragraphs);

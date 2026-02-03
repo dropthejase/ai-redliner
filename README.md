@@ -119,9 +119,9 @@ The agent calls `microsoft_actions_tool` with JSON. Each action:
 ```json
 {
   "task": "Brief description",   // Short description shown to user
-  "action": "replace",            // replace | append | prepend | delete | highlight | format_bold | format_italic | strikethrough | delete_row | insert_row
+  "action": "replace",            // replace | append | delete | highlight | format_bold | format_italic | strikethrough | delete_row | insert_row
   "loc": "p3",                    // paragraph index (p0, p1, p2...) or table cell (t0.r1.c0.p0) or table row (t0.r1)
-  "new_text": "Updated text.",    // required for replace/append/prepend, omitted for delete/formatting
+  "new_text": "Updated text.",    // required for replace/append, omitted for delete/formatting
   "rowData": [["col1", "col2"]]   // optional for insert_row: array of rows, each row is array of cell contents
 }
 ```

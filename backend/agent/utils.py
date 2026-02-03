@@ -135,6 +135,12 @@ async def mock_stream(word_document: str, model_id: str = "unknown"):
                     "occurrence": 0,
                 },
             },
+            # 8. Error testing
+            {
+                "task": "Error testing",
+                "action": "delete",
+                "loc": "p99",
+            },
         ],
     }
     await asyncio.sleep(0.3)
