@@ -1,31 +1,26 @@
 /* global Word console */
 
+import { resolveLocation } from "../taskpane";
+
 interface MicrosoftAction {
   loc?: string;
+  withinPara?: {
+    find: string;
+    occurrence: number;
+  };
   [key: string]: unknown;
 }
 
 export async function executeDelete(context: Word.RequestContext, microsoftAction: MicrosoftAction, paragraphs: Word.ParagraphCollection) {
-  const { loc } = microsoftAction;
+  const { loc, withinPara } = microsoftAction;
 
   if (!loc) {
     return;
   }
 
   try {
-    const match = loc.match(/^p(\d+)$/);
-    if (!match) {
-      throw new Error(`Invalid location format: ${loc}`);
-    }
-
-    const paragraphIndex = parseInt(match[1]);
-
-    if (paragraphIndex < 0 || paragraphIndex >= paragraphs.items.length) {
-      throw new Error(`Paragraph index ${paragraphIndex} out of range (0-${paragraphs.items.length - 1})`);
-    }
-
-    const paragraph = paragraphs.items[paragraphIndex];
-    paragraph.delete();
+    const range = await resolveLocation(context, loc, withinPara);
+    range.delete();
   } catch (error) {
     throw new Error(
       `Delete operation failed: ${error instanceof Error ? error.message : error}\nAction: ${JSON.stringify(microsoftAction, null, 2)}`

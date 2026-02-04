@@ -11,15 +11,29 @@ AI-powered Word document redlining assistant. Ask the agent to review or modify 
 - **Node.js** (18+) and **npm** — for the frontend
 - **Python 3.13** and **uv** — for the backend
 - **Microsoft Word** (desktop, macOS or Windows) — to sideload and run the add-in
-- **Anthropic Claude API Key**
+- **Anthropic Claude API Key** (or OpenAI, Gemini, etc.)
 
 ### 1. Backend
 
 ```bash
 cd backend
-cp .env.example .env          # paste your ANTHROPIC_API_KEY into .env
-uv sync                       # install dependencies
+cp .env.example .env                                        # Create .env
+cp litellm_config.yaml.example litellm_config.yaml          # Create .env
+uv sync                                                     # Install dependencies
+uv pip install 'litellm[proxy]'                             # Install LiteLLM proxy
 ```
+
+**Environment Configuration:**
+
+Edit `.env` and configure your LLM API Keys and `LITELLM_MASTER_KEY`
+```bash
+ANTHROPIC_API_KEY=...
+...
+# LiteLLM Proxy authentication (must match litellm_config.yaml)
+LITELLM_MASTER_KEY=...
+```
+To add further models, browse the available [LiteLLM model providers](https://models.litellm.ai/) and add them into `litellm_config.yaml`.
+Make sure to pull in any additional LLM API Keys from `.env` into `litellm_config.yaml`.
 
 ### 2. Frontend
 
@@ -32,7 +46,7 @@ npm install
 
 ## Running
 
-You need **two terminals** — one for the backend, one for the frontend. Start the frontend first, because it generates the SSL certs the backend reuses.
+You need **three terminals** — one for the frontend, one for the proxy, one for the backend. Start the frontend first, because it generates the SSL certs the backend reuses.
 
 ### Terminal 1 — Frontend
 
@@ -43,7 +57,16 @@ npm start
 
 The webpack dev server starts on `https://localhost:3000` and generates dev certs at `~/.office-addin-dev-certs/`.
 
-### Terminal 2 — Backend
+### Terminal 2 — LiteLLM Proxy
+
+```bash
+cd backend
+./start_proxy.sh
+```
+
+The proxy starts on `http://127.0.0.1:4000`. Configure available models in `backend/litellm_config.yaml`.
+
+### Terminal 3 — Backend
 
 ```bash
 cd backend
@@ -62,9 +85,16 @@ The server starts on `https://localhost:8000`.
 
 ---
 
+## Adding New Models
+
+Edit `backend/litellm_config.yaml` and add the model to `model_list`.
+Restart the proxy. The new models will automatically appear in the frontend's Settings page — no code changes needed.
+
+---
+
 ## Mock mode (no API key needed)
 
-If you don't have an `ANTHROPIC_API_KEY` yet, you can run the backend in mock mode. It returns a hardcoded SSE response — a short conversational message followed by a proposed replacement on paragraph `p0` — so you can test the full frontend flow (message bubbles, tool badge, modification review, approve/reject) without hitting the Anthropic API.
+If you don't have an API Key yet, you can run the backend in mock mode. It returns a hardcoded SSE response — a short conversational message followed by a proposed replacement on paragraph `p0` — so you can test the full frontend flow (message bubbles, tool badge, modification review, approve/reject) without hitting the Anthropic API.
 
 Start the backend with `MOCK=1`:
 
@@ -86,20 +116,25 @@ The frontend needs no changes. Type anything in the taskpane and it will receive
 ```text
 ┌───────────────────────┐
 │   Word Add-in (React) │  ← User types message, reviews proposed changes
-│   Office.js taskpane  │
+│   Office.js taskpane  │    GET /models → fetches available models dynamically
 └───────────┬───────────┘
             │ HTTPS
             │ POST /invoke (streams SSE)
-            │ GET /sessions, DELETE /sessions/{id}
+            │ GET /sessions, GET /models, DELETE /sessions/{id}
 ┌───────────▼───────────┐
-│  FastAPI Backend      │  ← Strands Agent + in-memory cache + FileSessionManager
-│  (Python, port 8000)  │
+│  FastAPI Backend      │  ← Strands Agent + LiteLLM + in-memory cache
+│  (Python, port 8000)  │    FileSessionManager for persistence
 └───────────┬───────────┘
-            │ HTTPS
-            │ Anthropic Messages API
+            │ HTTP
+            │ /model/info (fetch catalog)
 ┌───────────▼───────────┐
-│   Claude API          │  ← Model inference, tool use, streaming
-│   (claude-4.5-*)      │
+│  LiteLLM Proxy        │  ← Model router, cost tracking, rate limits
+│  (port 4000)          │    Configured via litellm_config.yaml
+└───────────┬───────────┘
+            │ HTTPS (to various providers)
+┌───────────▼───────────┐
+│   Model Providers     │  ← Anthropic, OpenAI, Gemini, Bedrock, etc.
+│   (Claude, GPT, etc.) │    LiteLLM handles unified API interface
 └───────────────────────┘
 ```
 
@@ -118,10 +153,11 @@ The agent calls `microsoft_actions_tool` with JSON. Each action:
 
 ```json
 {
-  "action": "replace",           // replace | append | prepend | delete | highlight | format_bold | format_italic | strikethrough
-  "loc": "p3",                   // paragraph index (p0, p1, p2...)
-  "new_text": "Updated text.",   // required for replace/append/prepend, omitted for delete/formatting
-  "reasoning": "Why this change" // shown to user in UI
+  "task": "Brief description",   // Short description shown to user
+  "action": "replace",            // replace | append | delete | highlight | format_bold | format_italic | strikethrough | delete_row | insert_row
+  "loc": "p3",                    // paragraph index (p0, p1, p2...) or table cell (t0.r1.c0.p0) or table row (t0.r1)
+  "new_text": "Updated text.",    // required for replace/append, omitted for delete/formatting
+  "rowData": [["col1", "col2"]]   // optional for insert_row: array of rows, each row is array of cell contents
 }
 ```
 
@@ -131,26 +167,26 @@ The agent calls `microsoft_actions_tool` with JSON. Each action:
 {
   "modifications": [
     {
+      "task": "Update document title",
       "action": "replace",
       "loc": "p0",
-      "new_text": "Confidentiality Agreement",
-      "reasoning": "Updated title"
+      "new_text": "Confidentiality Agreement"
     },
     {
+      "task": "Highlight vague term",
       "action": "highlight",
-      "loc": "p5",
-      "reasoning": "Vague term needs review"
+      "loc": "p5"
     },
     {
+      "task": "Remove obsolete clause",
       "action": "delete",
-      "loc": "p8",
-      "reasoning": "Obsolete clause"
+      "loc": "p8"
     }
   ]
 }
 ```
 
-Actions currently target **entire paragraphs**. Future enhancement: sub-paragraph targeting via `withinPara: {find: str, occurrence: int}`.
+Actions support **table cells**, **within-paragraph edits** via `withinPara: {find: str, occurrence: int}`, and **row operations** (see Features section below for details).
 
 ---
 
@@ -168,3 +204,73 @@ tail -f backend/.logs/redliner.log
 
 1. Follow the instructions [here](https://learn.microsoft.com/en-us/office/dev/add-ins/testing/debug-add-ins-overview#debug-on-windows)
 2. Right-click the Word-Addin and click **Inspect Element**
+
+---
+
+## Features
+
+### Table-Aware Context
+
+Redliner represents Word tables explicitly in the document context sent to the agent:
+
+```text
+p0: Introduction text
+t0: [Table]
+t0.r0.c0.p0: Header cell 1
+t0.r0.c1.p0: Header cell 2
+t0.r1.c0.p0: Data cell 1
+t0.r1.c1.p0: Data cell 2
+p5: Text after table
+```
+
+**Paragraph Numbering:** Regular paragraphs are numbered by their global position in the document. In the example above, `p0` is at position 0, the table cells occupy positions 1-4, so `p5` is the next paragraph at position 5.
+
+**Cell Paragraphs:** The `p` in `t{n}.r{r}.c{c}.p{p}` represents the paragraph index within that specific cell (starting from 0 for each cell).
+
+This allows the agent to:
+
+- Understand table structure
+- Modify specific cells
+- Insert or delete entire rows
+- Apply formatting to table content
+
+### Within-Paragraph Edits
+
+The agent can target specific text within paragraphs instead of replacing entire paragraphs:
+
+```json
+{
+  "action": "replace",
+  "loc": "p5",
+  "new_text": "Section 3.2",
+  "withinPara": {
+    "find": "Section 3.1",
+    "occurrence": 0
+  }
+}
+```
+
+This enables surgical edits like:
+
+- Correcting cross-references
+- Updating specific terms
+- Formatting individual words or phrases
+
+### Row-Level Operations
+
+The agent can insert or delete entire table rows:
+
+```json
+{
+  "task": "Remove obsolete data",
+  "action": "delete_row",
+  "loc": "t0.r2"
+}
+
+{
+  "task": "Add missing row after header",
+  "action": "insert_row",
+  "loc": "t0.r0",
+  "rowData": [["New cell 1", "New cell 2"]]
+}
+```

@@ -1,31 +1,25 @@
 /* global console */
 
+import { resolveLocation } from "../taskpane";
+
 interface MicrosoftAction {
   loc?: string;
+  withinPara?: {
+    find: string;
+    occurrence: number;
+  };
   [key: string]: unknown;
 }
 
 export async function executeStrikethrough(context: Word.RequestContext, microsoftAction: MicrosoftAction, paragraphs: Word.ParagraphCollection) {
-  const { loc } = microsoftAction;
+  const { loc, withinPara } = microsoftAction;
 
   if (!loc) {
     return;
   }
 
   try {
-    const match = loc.match(/^p(\d+)$/);
-    if (!match) {
-      throw new Error(`Invalid location format: ${loc}`);
-    }
-
-    const paragraphIndex = parseInt(match[1]);
-
-    if (paragraphIndex < 0 || paragraphIndex >= paragraphs.items.length) {
-      throw new Error(`Paragraph index ${paragraphIndex} out of range (0-${paragraphs.items.length - 1})`);
-    }
-
-    const paragraph = paragraphs.items[paragraphIndex];
-    const range = paragraph.getRange("Content");
+    const range = await resolveLocation(context, loc, withinPara);
     range.font.strikeThrough = true;
   } catch (error) {
     throw new Error(
