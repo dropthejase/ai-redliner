@@ -13,6 +13,7 @@ wheels/
 backend/.env
 backend/sessions/
 backend/.logs/
+backend/litellm_config.yaml
 
 # Frontend build artifacts and dependencies
 frontend/node_modules/
