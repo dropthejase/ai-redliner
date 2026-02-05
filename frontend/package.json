@@ -21,6 +21,7 @@
     "watch": "webpack --mode development --watch"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.2.6",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "core-js": "^3.36.0",

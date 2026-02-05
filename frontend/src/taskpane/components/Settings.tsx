@@ -1,5 +1,12 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 export interface ModelOption {
   id: string;
@@ -65,34 +72,27 @@ const Settings: React.FC<SettingsProps> = ({ selectedModel, onModelChange }) => 
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         <div>
           <h2 className="text-sm font-semibold text-foreground mb-3">Model</h2>
-          <div className="flex flex-col gap-2">
-            {models.map((model) => {
-              const isSelected = selectedModel === model.id;
-              return (
-                <button
-                  key={model.id}
-                  onClick={() => onModelChange(model.id)}
-                  className={cn(
-                    "text-left w-full px-3 py-2.5 rounded-lg border transition-colors",
-                    isSelected
-                      ? "border-primary bg-accent"
-                      : "border-border bg-card hover:bg-card-foreground/5"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={cn("text-sm font-medium", isSelected ? "text-accent-foreground" : "text-foreground")}>
-                      {model.label}
-                    </span>
-                    {isSelected && (
-                      <span className="text-xs text-accent-foreground font-medium">Selected</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+          <Select value={selectedModel} onValueChange={onModelChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  {model.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold text-foreground mb-3">MCP Servers</h2>
+          <div className="px-3 py-2 text-sm text-muted-foreground italic border border-border rounded-lg bg-card">
+            Coming soon
           </div>
         </div>
       </div>
