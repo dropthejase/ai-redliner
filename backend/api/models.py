@@ -25,30 +25,11 @@ async def list_models():
                 # Transform proxy response to frontend format
                 models = []
                 for model_info in data.get("data", []):
-                    model_id = model_info["model_name"]
-
-                    # Generate friendly label and description
-                    label = model_id.replace("-", " ").replace("_", " ").title()
-                    description = ""
-
-                    # Add descriptions for known models
-                    if "haiku" in model_id.lower():
-                        description = "Fastest, most affordable"
-                    elif "sonnet" in model_id.lower():
-                        description = "Balanced speed and quality"
-                    elif "opus" in model_id.lower():
-                        description = "Most capable, slowest"
-                    elif "gpt-4o-mini" in model_id.lower():
-                        description = "Fast and affordable OpenAI model"
-                    elif "gpt-4o" in model_id.lower():
-                        description = "OpenAI's most capable model"
-                    elif "gemini" in model_id.lower():
-                        description = "Google's multimodal model"
-
+                    # Use the litellm_params.model if available, otherwise model_name
+                    model_id = model_info.get("litellm_params", {}).get("model") or model_info["model_name"]
                     models.append({
                         "id": model_id,
-                        "label": label,
-                        "description": description,
+                        "label": model_id,
                     })
 
                 logger.info(f"Served {len(models)} models from proxy")
@@ -60,8 +41,8 @@ async def list_models():
     # Fallback: static list when proxy is unavailable
     return {
         "models": [
-            {"id": "claude-haiku-4-5", "label": "Claude Haiku 4.5", "description": "Fastest, most affordable"},
-            {"id": "claude-sonnet-4-5", "label": "Claude Sonnet 4.5", "description": "Balanced speed and quality"},
-            {"id": "claude-opus-4-5", "label": "Claude Opus 4.5", "description": "Most capable, slowest"},
+            {"id": "anthropic/claude-haiku-4-5", "label": "Claude Haiku 4.5"},
+            {"id": "anthropic/claude-sonnet-4-5", "label": "Claude Sonnet 4.5"},
+            {"id": "anthropic/claude-opus-4-5", "label": "Claude Opus 4.5"},
         ]
     }

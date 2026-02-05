@@ -4,12 +4,11 @@ import { cn } from "../lib/utils";
 export interface ModelOption {
   id: string;
   label: string;
-  description: string;
 }
 
 export type ModelId = string;
 
-export const DEFAULT_MODEL_ID = "claude-haiku-4-5";
+export const DEFAULT_MODEL_ID = "anthropic/claude-haiku-4-5";
 const STORAGE_KEY = "redliner:model";
 
 export function getStoredModel(): ModelId {
@@ -91,9 +90,6 @@ const Settings: React.FC<SettingsProps> = ({ selectedModel, onModelChange }) => 
                       <span className="text-xs text-accent-foreground font-medium">Selected</span>
                     )}
                   </div>
-                  <p className={cn("text-xs mt-0.5", isSelected ? "text-accent-foreground/70" : "text-muted-foreground")}>
-                    {model.description}
-                  </p>
                 </button>
               );
             })}
