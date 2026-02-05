@@ -11,7 +11,8 @@ AI-powered Word document redlining assistant. Ask the agent to review or modify 
 - **Node.js** (18+) and **npm** — for the frontend
 - **Python 3.13** and **uv** — for the backend
 - **Microsoft Word** (desktop, macOS or Windows) — to sideload and run the add-in
-- **Anthropic Claude API Key** (or OpenAI, Gemini, etc.)
+  - **Requires WordApiDesktop 1.4 or higher ([Version 2508 (Build 19127.20264)](https://learn.microsoft.com/en-us/javascript/api/requirement-sets/word/word-api-requirement-sets?view=word-js-preview))** for programmatically using Simple Markup mode. If you cannot upgrade your Microsoft Word version, set your **Mark-up Options** to **Show Revisions in Balloons**.
+- **LLM API Key(s)**
 
 ### 1. Backend
 

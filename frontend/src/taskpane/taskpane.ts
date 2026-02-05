@@ -122,8 +122,28 @@ export async function isDocumentEmpty(): Promise<boolean> {
   });
 }
 
+/**
+ * Switches the Word view to Simple Markup mode for consistent hash calculation.
+ * Requires WordApiDesktop 1.4 or higher.
+ */
+async function switchToSimpleMarkupMode(): Promise<void> {
+  try {
+    await Word.run(async (context: Word.RequestContext) => {
+      const revisionsFilter = context.document.activeWindow.view.revisionsFilter;
+      revisionsFilter.set({ markup: "Simple" });
+      await context.sync();
+    });
+  } catch (viewError) {
+    console.log("Note: Could not set Simple Markup mode:", viewError);
+    // Continue anyway - this is a nice-to-have, not critical
+  }
+}
+
 export async function getWordDocumentContent(): Promise<string> {
   try {
+    // Set Simple Markup mode for consistent hash calculation
+    await switchToSimpleMarkupMode();
+
     const paragraphMapping = await createParagraphMapping();
     return Object.entries(paragraphMapping)
       .map(([key, value]) => `${key}: ${value}`)
@@ -349,9 +369,6 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
 
       await context.sync();
     });
-
-    // Turn tracking back off so Word doesn't keep tracking user edits
-    await setTrackingMode("disable");
 
     if (errors.length > 0) {
       throw new Error(`Some actions failed:\n\n${errors.join("\n\n")}`);
