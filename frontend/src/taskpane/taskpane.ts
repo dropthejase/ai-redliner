@@ -9,6 +9,8 @@ import { executeFormatItalic } from "./microsoft-actions/format_italic";
 import { executeStrikethrough } from "./microsoft-actions/strikethrough";
 import { executeDeleteRow } from "./microsoft-actions/delete_row";
 import { executeInsertRow } from "./microsoft-actions/insert_row";
+import { executeCreateTable } from "./microsoft-actions/create_table";
+import { executeDeleteTable } from "./microsoft-actions/delete_table";
 
 interface MicrosoftAction {
   action: string;
@@ -46,8 +48,11 @@ async function createParagraphMapping(): Promise<Record<string, string>> {
     await context.sync();
 
     // Build mapping by iterating through paragraphs in document order
+    // New format: {docPosition}.{originalKey}
+    // - Text paragraphs: "0.p0", "8.p8"
+    // - Table cells: "1.t0.r0.c0.p0"
     const paragraphMapping: Record<string, string> = {};
-    let globalParaCounter = 0; // Tracks position in entire document (for regular paragraph indexing)
+    let docPosition = 0; // Absolute position in document
     let tableCounter = 0;
     let insideTable = false;
 
@@ -72,13 +77,12 @@ async function createParagraphMapping(): Promise<Record<string, string>> {
           insideTable = false;
         }
 
-        paragraphMapping[`p${globalParaCounter}`] = para.text;
-        globalParaCounter++;
+        paragraphMapping[`${docPosition}.p${i}`] = para.text;
+        docPosition++;
       } else {
         // This paragraph is in a table cell
         if (!insideTable) {
           // Just entered a new table
-          paragraphMapping[`t${tableCounter}`] = "[Table]";
           insideTable = true;
         }
 
@@ -90,9 +94,14 @@ async function createParagraphMapping(): Promise<Record<string, string>> {
         const paraIndexInCell = cellParaCounters.get(cellKey) || 0;
         cellParaCounters.set(cellKey, paraIndexInCell + 1);
 
-        paragraphMapping[`${cellKey}.p${paraIndexInCell}`] = para.text;
-        globalParaCounter++; // Table cell paragraphs also consume global indices
+        paragraphMapping[`${docPosition}.${cellKey}.p${paraIndexInCell}`] = para.text;
+        docPosition++;
       }
+    }
+
+    // If we ended inside a table, increment counter
+    if (insideTable) {
+      tableCounter++;
     }
 
     // Debug: Log raw paragraph list
@@ -140,7 +149,7 @@ export async function getSelectedText(): Promise<string | null> {
 }
 
 /**
- * Resolves a location string (e.g., "p5", "t0.r1.c2.p0") to a Word.Range.
+ * Resolves a location string (e.g., "5.p5", "2.t0.r1.c2.p0") to a Word.Range.
  * If withinPara is provided, searches within the paragraph and returns the specific occurrence.
  */
 export async function resolveLocation(
@@ -148,9 +157,9 @@ export async function resolveLocation(
   loc: string,
   withinPara?: { find: string; occurrence: number },
 ): Promise<Word.Range> {
-  // Parse location
-  const regularMatch = loc.match(/^p(\d+)$/);
-  const tableMatch = loc.match(/^t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
+  // Parse location - new format: {docPosition}.{key}
+  const regularMatch = loc.match(/^\d+\.p(\d+)$/);
+  const tableMatch = loc.match(/^\d+\.t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
 
   let targetParagraph: Word.Paragraph;
 
@@ -278,8 +287,21 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
       paragraphs.load("items");
       await context.sync();
 
-      for (const action of microsoftActions) {
+      // Sort actions by docPosition descending to avoid index shifting
+      const sortedActions = [...microsoftActions].sort((a, b) => {
+        const getDocPosition = (loc: string) => {
+          const match = loc.match(/^(\d+)\./);
+          return match ? parseInt(match[1]) : 0;
+        };
+        return getDocPosition(b.loc || "") - getDocPosition(a.loc || "");
+      });
+
+      for (const action of sortedActions) {
         try {
+          // Log execution order
+          const task = (action as any).task || action.action;
+          console.log(`Executing: ${task} (${action.loc})`);
+
           switch (action.action) {
             case "none":
               break;
@@ -309,6 +331,12 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
               break;
             case "insert_row":
               await executeInsertRow(context, action, paragraphs);
+              break;
+            case "create_table":
+              await executeCreateTable(context, action, paragraphs);
+              break;
+            case "delete_table":
+              await executeDeleteTable(context, action, paragraphs);
               break;
             default:
               console.log(`Unknown action: ${action.action}`);

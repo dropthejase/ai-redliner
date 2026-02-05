@@ -14,11 +14,11 @@ export async function executeInsertRow(context: Word.RequestContext, microsoftAc
   }
 
   try {
-    // Parse location: t{n}.r{m} - insert after row m in table n
-    const match = loc.match(/^t(\d+)\.r(\d+)$/);
+    // Parse location: {docPosition}.t{n}.r{m} - insert after row m in table n
+    const match = loc.match(/^\d+\.t(\d+)\.r(\d+)$/);
 
     if (!match) {
-      throw new Error(`Invalid row location format: ${loc}. Expected format: t{n}.r{m}`);
+      throw new Error(`Invalid row location format: ${loc}. Expected format: {docPosition}.t{n}.r{m}`);
     }
 
     const tableIndex = parseInt(match[1]);
