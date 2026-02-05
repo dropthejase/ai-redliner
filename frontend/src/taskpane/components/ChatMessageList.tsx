@@ -19,6 +19,8 @@ interface Message {
   actedUpon?: boolean;
   appliedIndices?: number[];
   rejectedIndices?: number[];
+  failedIndices?: number[];
+  errorMessages?: Record<number, string>;
   rejected?: boolean;
   hashMismatch?: boolean;
 }
@@ -27,7 +29,7 @@ interface ChatMessageListProps {
   messages: Message[];
   loading: boolean;
   pendingActions: Action[];
-  onApplyModifications: (appliedIndices: number[], rejectedIndices: number[]) => void;
+  onApplyModifications: (appliedIndices: number[], rejectedIndices: number[], failedIndices?: number[], errorMessages?: Record<number, string>) => void;
   documentHashWhenSent: string | null;
   onHashMismatch: () => void;
 }
@@ -71,6 +73,8 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
                 msg.rejectedIndices ||
                 (msg.rejected ? msg.actions.map((_, i) => i) : [])
               }
+              failedIndices={msg.failedIndices || []}
+              errorMessages={msg.errorMessages || {}}
               expandedByDefault={msg.hashMismatch}
             />
           )}

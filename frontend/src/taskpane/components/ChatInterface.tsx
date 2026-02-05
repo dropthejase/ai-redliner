@@ -26,6 +26,8 @@ interface Message {
   actedUpon?: boolean;
   appliedIndices?: number[];
   rejectedIndices?: number[];
+  failedIndices?: number[];
+  errorMessages?: Record<number, string>;
   rejected?: boolean;
   hashMismatch?: boolean;
 }
@@ -134,7 +136,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
     }
   };
 
-  const handleApplyModifications = (appliedIndices: number[], rejectedIndices: number[], hashMismatch = false) => {
+  const handleApplyModifications = (appliedIndices: number[], rejectedIndices: number[], failedIndices?: number[], errorMessages?: Record<number, string>, hashMismatch = false) => {
     setMessages((prev) => [
       ...prev,
       {
@@ -143,6 +145,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
         actedUpon: true,
         appliedIndices,
         rejectedIndices,
+        failedIndices: failedIndices || [],
+        errorMessages: errorMessages || {},
         hashMismatch,
       },
     ]);

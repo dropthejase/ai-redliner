@@ -17,10 +17,12 @@ interface Action {
 
 interface ModificationReviewProps {
   modifications: Action[];
-  onApply: (appliedIndices: number[], rejectedIndices: number[], hashMismatch?: boolean) => void;
+  onApply: (appliedIndices: number[], rejectedIndices: number[], failedIndices?: number[], errorMessages?: Record<number, string>, hashMismatch?: boolean) => void;
   disabled: boolean;
   appliedIndices?: number[];
   rejectedIndices?: number[];
+  failedIndices?: number[];
+  errorMessages?: Record<number, string>;
   documentHashWhenSent?: string | null;
   onHashMismatch?: () => void;
   expandedByDefault?: boolean;
@@ -109,6 +111,8 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
   disabled,
   appliedIndices = [],
   rejectedIndices = [],
+  failedIndices = [],
+  errorMessages: propErrorMessages = {},
   documentHashWhenSent,
   onHashMismatch,
   expandedByDefault,
@@ -162,7 +166,7 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
 
       if (currentHash !== documentHashWhenSent) {
         if (onHashMismatch) onHashMismatch();
-        onApply([], modifications.map((_, i) => i), true);
+        onApply([], modifications.map((_, i) => i), [], {}, true);
         return;
       }
     }
@@ -215,18 +219,19 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
     setErrors(newErrors);
     setSuccesses(newSuccesses);
 
-    const applied = selectedMods;
+    const applied = Object.keys(newSuccesses).map(Number);
+    const failed = Object.keys(newErrors).map(Number);
     const rejected = modifications.map((_, i) => i).filter((i) => !selectedMods.includes(i));
 
     // If there are errors, keep panel expanded and auto-expand failed items
-    if (Object.keys(newErrors).length > 0) {
+    if (failed.length > 0) {
       setExpanded(true);
-      setExpandedMods(Object.keys(newErrors).map(Number));
+      setExpandedMods(failed);
     } else {
       setExpanded(false);
     }
 
-    onApply(applied, rejected);
+    onApply(applied, rejected, failed, newErrors);
   };
 
   const hasErrors = Object.keys(errors).length > 0;
@@ -236,6 +241,7 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
   const getStatus = (i: number): "applied" | "rejected" | "error" | "pending" => {
     if (errors[i]) return "error";
     if (successes[i]) return "applied";
+    if (disabled && failedIndices.includes(i)) return "error";
     if (disabled && appliedIndices.includes(i)) return "applied";
     if (disabled && rejectedIndices.includes(i)) return "rejected";
     return "pending";
@@ -336,9 +342,9 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
                         />
                       )
                     )}
-                    {errors[i] && (
+                    {(errors[i] || (disabled && failedIndices.includes(i))) && (
                       <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-destructive">
-                        <strong>Error:</strong> {errors[i]}
+                        <strong>Error:</strong> {errors[i] || propErrorMessages[i] || "This modification failed to apply"}
                       </div>
                     )}
                   </div>
