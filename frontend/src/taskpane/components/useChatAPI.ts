@@ -5,6 +5,7 @@ interface MessagePayload {
   word_document: string;
   highlighted: string;
   model?: string;
+  document_hash?: string;
 }
 
 type OnResponseCallback = (event: Record<string, unknown>) => void;
