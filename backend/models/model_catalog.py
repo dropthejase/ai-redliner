@@ -18,7 +18,7 @@ async def get_allowed_models() -> set[str]:
                 resp = await client.get(f"{LITELLM_PROXY_URL}/model/info", headers=headers, timeout=5.0)
                 resp.raise_for_status()
                 data = resp.json()
-                model_ids = {m["model_name"] for m in data.get("data", [])}
+                model_ids = {m.get("litellm_params", {}).get("model") or m["model_name"] for m in data.get("data", [])}  
                 logger.info(f"Fetched {len(model_ids)} models from proxy")
                 return model_ids
         except Exception as e:

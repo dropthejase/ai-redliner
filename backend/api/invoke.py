@@ -107,6 +107,7 @@ async def invoke(request: Request):
     word_document = body.get("word_document", "")
     highlighted = body.get("highlighted", "")
     model_id = body.get("model", DEFAULT_MODEL_ID)
+    current_hash = body.get("document_hash", None)
 
     # Validate model ID against proxy catalog or fallback list
     allowed_models = await get_allowed_models()
@@ -126,17 +127,39 @@ async def invoke(request: Request):
 
         return StreamingResponse(mock_sse(), media_type="text/event-stream")
 
-    # Convert problematic characters to placeholders before sending to LLM
-    word_document = convert_to_placeholders(word_document)
-    highlighted = convert_to_placeholders(highlighted)
-
-    # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
-    highlighted_section = f"<highlighted>{highlighted}</highlighted>" if highlighted else ""
-
-    # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
-    user_message = f"<word_document>{word_document}</word_document>\n{highlighted_section}\n<user_input>{user_input}</user_input>"
-
     agent = get_or_create_agent(session_id, model_id)
+
+    # Check if document unchanged since last message in this session
+    last_doc_hash = getattr(agent, '_last_doc_hash', None)
+    doc_unchanged = (current_hash and last_doc_hash and current_hash == last_doc_hash)
+
+    # Store current hash for next request
+    agent._last_doc_hash = current_hash
+
+    if doc_unchanged:
+        # Document hasn't changed — skip sending full content, just send user input
+        logger.info("Document unchanged (hash match) — skipping document content")
+
+        # Still convert highlighted text (user may have selected different text)
+        highlighted = convert_to_placeholders(highlighted)
+        # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
+        highlighted_section = f"<highlighted>{highlighted}</highlighted>" if highlighted else ""
+
+        # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
+        user_message = f"{highlighted_section}\n<user_input>{user_input}</user_input>\n\n<note>The Word document content is unchanged since your last response. Refer to the previous <word_document> in this conversation.</note>"
+    else:
+        # Document changed or first message — send full content
+        logger.info("Document changed or first message — sending full document content")
+
+        # Convert problematic characters to placeholders before sending to LLM
+        word_document = convert_to_placeholders(word_document)
+        highlighted = convert_to_placeholders(highlighted)
+
+        # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
+        highlighted_section = f"<highlighted>{highlighted}</highlighted>" if highlighted else ""
+
+        # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
+        user_message = f"<word_document>{word_document}</word_document>\n{highlighted_section}\n<user_input>{user_input}</user_input>"
 
     async def sse_stream():
         async for event in stream_agent_response(agent, user_message):

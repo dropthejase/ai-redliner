@@ -193,6 +193,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
           word_document: documentContent,
           highlighted: selectedText || "",
           model: selectedModel,
+          document_hash: hash,
         },
         handleChatResponse
       );
