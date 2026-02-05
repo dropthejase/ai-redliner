@@ -175,63 +175,21 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
       }))
       .filter((mod) => selectedMods.includes(mod.originalIndex))
       .sort((a, b) => {
-        // Classify operation types
-        const getOperationType = (mod: typeof a): "paragraph" | "table_cell" | "table_row" => {
-          if (mod.action === "delete_row" || mod.action === "insert_row") {
-            return "table_row";
-          }
-          if (mod.loc?.match(/^t\d+\.r\d+\.c\d+\.p\d+$/)) {
-            return "table_cell";
-          }
-          return "paragraph";
+        // Sort by docPosition descending (same logic as executeWordAction)
+        const getDocPosition = (loc: string | undefined) => {
+          if (!loc) return 0;
+          const match = loc.match(/^(\d+)\./);
+          return match ? parseInt(match[1]) : 0;
         };
 
-        const aType = getOperationType(a);
-        const bType = getOperationType(b);
+        const aPos = getDocPosition(a.loc);
+        const bPos = getDocPosition(b.loc);
 
-        // Priority: paragraph operations first, then table_cell, then table_row
-        const typePriority = { paragraph: 0, table_cell: 1, table_row: 2 };
-        if (typePriority[aType] !== typePriority[bType]) {
-          return typePriority[aType] - typePriority[bType];
+        if (aPos !== bPos) {
+          return bPos - aPos; // Descending order
         }
 
-        // Within same type, sort by location
-        const parseLocation = (loc: string | undefined): number[] => {
-          if (!loc) return [0];
-
-          const regularMatch = loc.match(/^p(\d+)$/);
-          if (regularMatch) {
-            return [parseInt(regularMatch[1])];
-          }
-
-          const tableCellMatch = loc.match(/^t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
-          if (tableCellMatch) {
-            const [, t, r, c, p] = tableCellMatch;
-            return [parseInt(t), parseInt(r), parseInt(c), parseInt(p)];
-          }
-
-          const tableRowMatch = loc.match(/^t(\d+)\.r(\d+)$/);
-          if (tableRowMatch) {
-            const [, t, r] = tableRowMatch;
-            return [parseInt(t), parseInt(r)];
-          }
-
-          return [0];
-        };
-
-        const aKeys = parseLocation(a.loc);
-        const bKeys = parseLocation(b.loc);
-
-        // Compare lexicographically in reverse order (descending)
-        for (let i = 0; i < Math.max(aKeys.length, bKeys.length); i++) {
-          const aKey = aKeys[i] ?? 0;
-          const bKey = bKeys[i] ?? 0;
-          if (aKey !== bKey) {
-            return bKey - aKey;
-          }
-        }
-
-        // If locations are identical, sort by withinPara occurrence in descending order
+        // If same docPosition, sort by withinPara occurrence in descending order
         // (higher occurrence executes first to avoid invalidating earlier occurrences)
         const aOccurrence = a.withinPara?.occurrence ?? -1;
         const bOccurrence = b.withinPara?.occurrence ?? -1;

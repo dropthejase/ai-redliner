@@ -13,9 +13,9 @@ export async function executeDeleteRow(context: Word.RequestContext, microsoftAc
   }
 
   try {
-    const rowMatch = loc.match(/^t(\d+)\.r(\d+)$/);
+    const rowMatch = loc.match(/^\d+\.t(\d+)\.r(\d+)$/);
     if (!rowMatch) {
-      throw new Error(`Invalid row location format: ${loc}. Expected format: t{tableIndex}.r{rowIndex}`);
+      throw new Error(`Invalid row location format: ${loc}. Expected format: {docPosition}.t{tableIndex}.r{rowIndex}`);
     }
 
     const [, t, r] = rowMatch;
