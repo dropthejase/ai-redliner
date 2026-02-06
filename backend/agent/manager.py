@@ -1,10 +1,16 @@
 from strands import Agent
+from strands_tools import file_read
 from strands.types.content import SystemContentBlock
 from strands.session.file_session_manager import FileSessionManager
 from agent.prompts import REDLINER_PROMPT
-from agent.tools import microsoft_actions_tool
+from agent.utils import load_tool_paths, list_skills
 from models.litellm_client import create_litellm_model
 from config import SESSIONS_DIR
+
+
+CUSTOM_TOOL_PATHS = load_tool_paths()
+BUILT_IN_TOOLS = [file_read]
+ALL_TOOLS = BUILT_IN_TOOLS + CUSTOM_TOOL_PATHS
 
 # In-memory agent cache: session_id -> (Agent, model_id)
 _agent_cache: dict[str, tuple[Agent, str]] = {}
@@ -32,9 +38,10 @@ def get_or_create_agent(session_id: str, model_id: str) -> Agent:
         model=model,
         system_prompt=[
             SystemContentBlock(text=REDLINER_PROMPT),
+            SystemContentBlock(text=list_skills()),
             SystemContentBlock(cachePoint={"type": "default"}),
         ],
-        tools=[microsoft_actions_tool],
+        tools=ALL_TOOLS,
         session_manager=session_manager,
     )
     _agent_cache[session_id] = (agent, model_id)

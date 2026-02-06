@@ -2,6 +2,9 @@
 Utility functions to use in agent/main.py
 """
 
+import os
+import re
+
 # Character mapping for problematic characters that may get normalised by LLM
 CHAR_PLACEHOLDERS = {
     '\r': '[u+000D]',      # Carriage return \r
@@ -29,6 +32,64 @@ def convert_from_placeholders(text: str) -> str:
     for char, placeholder in CHAR_PLACEHOLDERS.items():
         text = text.replace(placeholder, char)
     return text
+
+
+def load_tool_paths() -> list:
+    tools_dir = "./tools"
+    if not os.path.exists(tools_dir):
+        return []
+        
+    return [f"./tools/{f}" for f in os.listdir(tools_dir) 
+            if f.endswith(".py") and f != "__init__.py"]
+
+
+def list_skills() -> str:
+    """
+    Scans the skills directory, parses frontmatter, and validates names.
+    Returns a formatted string for the system prompt.
+    """
+    # Get the directory where the agent script lives
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Skills folder is one level up from the agent folder
+    skills_dir = os.path.abspath(os.path.join(base_dir, "..", "skills"))
+    
+    available_skills = []
+
+    if not os.path.exists(skills_dir):
+        return "# AVAILABLE SKILLS\n(No skills directory found)"
+
+    for filename in os.listdir(skills_dir):
+        if filename.endswith(".md"):
+            path = os.path.join(skills_dir, filename)
+            
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+                
+                # Split by frontmatter delimiters
+                sections = content.split("---")
+                if len(sections) < 3:
+                    continue
+                
+                # We only look at the content between the first two '---'
+                header = sections[1]
+                
+                name_match = re.search(r"^name:\s*(.*)", header, re.MULTILINE)
+                desc_match = re.search(r"^description:\s*(.*)", header, re.MULTILINE)
+                
+                if name_match and desc_match:
+                    name = name_match.group(1).strip()
+                    desc = desc_match.group(1).strip()
+                    
+                    # Error handling: No spaces allowed in skill names
+                    if " " in name:
+                        raise ValueError(
+                            f"Skill name '{name}' in {filename} contains spaces. "
+                            "Please use underscores instead."
+                        )
+                    
+                    available_skills.append(f"- {name}: {desc}")
+
+    return "# AVAILABLE SKILLS\n" + "\n".join(available_skills)
 
 
 def remove_thinking_tags(response_str):
