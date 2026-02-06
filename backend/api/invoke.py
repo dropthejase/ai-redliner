@@ -41,24 +41,33 @@ async def stream_agent_response(agent, user_message: str):
         elif "event" in event:
             event_type = event["event"]
 
-            # Tool use start - shows badge immediately
-            if "contentBlockStart" in event_type:
-                start = event_type["contentBlockStart"].get("start", {})
-                if "toolUse" in start:
-                    tool_name = start["toolUse"].get("name")
-                    if tool_name:
-                        # Flush text buffer before showing tool badge
-                        if text_buffer:
-                            yield {"type": "content", "data": "".join(text_buffer)}
-                            text_buffer.clear()
-
-                        yield {
-                            "type": "tool_use",
-                            "tool_name": tool_name
-                        }
+            # Tool use start - COMMENTED OUT: now using message event to get input
+            # if "contentBlockStart" in event_type:
+            #     start = event_type["contentBlockStart"].get("start", {})
+            #     if "toolUse" in start:
+            #         tool_name = start["toolUse"].get("name")
+            #         if tool_name:
+            #             # Flush text buffer before showing tool badge
+            #             if text_buffer:
+            #                 yield {"type": "content", "data": "".join(text_buffer)}
+            #                 text_buffer.clear()
+            #
+            #             yield {
+            #                 "type": "tool_use",
+            #                 "tool_name": tool_name
+            #             }
 
             # End turn
-            elif "messageStop" in event_type:
+            # elif "messageStop" in event_type:
+            #     if event_type["messageStop"].get("stopReason") == "end_turn":
+            #         # Flush remaining text
+            #         if text_buffer:
+            #             yield {"type": "content", "data": "".join(text_buffer)}
+            #             text_buffer.clear()
+
+            #         yield {"type": "end_turn"}
+
+            if "messageStop" in event_type:
                 if event_type["messageStop"].get("stopReason") == "end_turn":
                     # Flush remaining text
                     if text_buffer:
@@ -66,6 +75,7 @@ async def stream_agent_response(agent, user_message: str):
                         text_buffer.clear()
 
                     yield {"type": "end_turn"}
+
 
         # --- Complete message (contains tool invocations) ---
         elif "message" in event:
@@ -96,6 +106,13 @@ async def stream_agent_response(agent, user_message: str):
                                 }
                             except Exception as e:
                                 logger.error("Failed to parse microsoft_actions: %s", str(e))
+                        else:
+                            # Other tools - emit with input for frontend badge
+                            yield {
+                                "type": "tool_use",
+                                "tool_name": tool_name,
+                                "input": tool_use.get("input", {})
+                            }
 
 
 @router.post("/invoke")

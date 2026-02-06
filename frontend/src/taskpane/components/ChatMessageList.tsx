@@ -15,6 +15,7 @@ interface Message {
   role: string;
   content?: { text: string }[];
   tool_name?: string;
+  tool_input?: Record<string, any>;
   actions?: Action[];
   actedUpon?: boolean;
   appliedIndices?: number[];
@@ -55,9 +56,16 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
           {/* Tool usage badge */}
           {msg.role === "tool_indicator" && (
             <div className="flex justify-center">
-              <span className="inline-flex items-center gap-1.5 bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full font-medium shadow-sm">
-                <Wrench className="w-3 h-3" />
-                Using {msg.tool_name}
+              <span className="flex flex-col items-start gap-0.5 bg-accent text-accent-foreground text-xs px-3 py-2 rounded-lg shadow-sm w-[80%]">
+                <div className="flex items-center gap-1.5">
+                  <Wrench className="w-3 h-3" />
+                  <span className="font-semibold">{msg.tool_name}</span>
+                </div>
+                {msg.tool_input && Object.entries(msg.tool_input).map(([k, v]) => (
+                  <div key={k} className="opacity-80">
+                    <span className="font-semibold">{k}</span>: {String(v)}
+                  </div>
+                ))}
               </span>
             </div>
           )}

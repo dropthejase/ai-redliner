@@ -3,12 +3,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api import invoke_router, models_router, sessions_router
 
-# Logging — file only
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Logging — file only (configure root logger to capture all modules)
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
 _handler = logging.FileHandler(".logs/redliner.log")
 _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s | %(message)s"))
-logger.addHandler(_handler)
+root_logger.addHandler(_handler)
 
 # FastAPI app
 app = FastAPI()

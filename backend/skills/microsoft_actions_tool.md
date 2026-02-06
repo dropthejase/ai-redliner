@@ -1,6 +1,6 @@
 ---
 name: microsoft_actions_tool
-description: For proposing modifications to word documents
+description: For drafting new content or modifying existing content in word documents
 ---
 
 ## Description
