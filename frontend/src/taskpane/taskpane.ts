@@ -169,14 +169,15 @@ export async function getSelectedText(): Promise<string | null> {
 }
 
 /**
- * Resolves a location string (e.g., "5.p5", "2.t0.r1.c2.p0") to a Word.Range.
- * If withinPara is provided, searches within the paragraph and returns the specific occurrence.
+ * Resolves a location string (e.g., "5.p5", "2.t0.r1.c2.p0") to a Word.Paragraph or Word.Range.
+ * If withinPara is provided, searches within the paragraph and returns the specific Range occurrence.
+ * If withinPara is not provided, returns the Paragraph object for node-level operations.
  */
 export async function resolveLocation(
   context: Word.RequestContext,
   loc: string,
   withinPara?: { find: string; occurrence: number },
-): Promise<Word.Range> {
+): Promise<Word.Paragraph | Word.Range> {
   // Parse location - new format: {docPosition}.{key}
   const regularMatch = loc.match(/^\d+\.p(\d+)$/);
   const tableMatch = loc.match(/^\d+\.t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
@@ -277,8 +278,8 @@ export async function resolveLocation(
 
     return searchResults.items[withinPara.occurrence];
   } else {
-    // Return the entire paragraph content range
-    return targetParagraph.getRange("Content");
+    // Return the paragraph object for node-level operations
+    return targetParagraph;
   }
 }
 
