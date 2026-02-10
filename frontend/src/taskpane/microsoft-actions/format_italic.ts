@@ -19,7 +19,7 @@ export async function executeFormatItalic(context: Word.RequestContext, microsof
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.font.italic = true;
   } catch (error) {
     throw new Error(

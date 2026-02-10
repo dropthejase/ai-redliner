@@ -20,7 +20,7 @@ export async function executeReplace(context: Word.RequestContext, microsoftActi
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.insertText(new_text || "", Word.InsertLocation.replace);
   } catch (error) {
     throw new Error(

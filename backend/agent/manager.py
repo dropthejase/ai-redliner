@@ -1,5 +1,5 @@
 from strands import Agent
-from strands_tools import editor, file_read, shell
+from strands_tools import editor, file_read, python_repl, shell
 from strands.types.content import SystemContentBlock
 from strands.session.file_session_manager import FileSessionManager
 from agent.prompts import REDLINER_PROMPT
@@ -9,7 +9,7 @@ from config import SESSIONS_DIR
 
 
 CUSTOM_TOOL_PATHS = load_tool_paths()
-BUILT_IN_TOOLS = [editor, file_read, shell]
+BUILT_IN_TOOLS = [editor, file_read, python_repl, shell]
 ALL_TOOLS = BUILT_IN_TOOLS + CUSTOM_TOOL_PATHS
 
 # In-memory agent cache: session_id -> (Agent, model_id)

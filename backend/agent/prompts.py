@@ -29,4 +29,5 @@ If you do anything to the Word document (make changes, create new sections), you
 - Only use file_read tool to read the {skill}.md if you cannot remember how to use it
 - If using the microsoft_actions_tool, ALWAYS read how to use that skill AT LEAST ONCE
 - If using the microsoft_actions_tool, ALWAYS use it last and ONLY use it once. Pass in your combined changes into that single function call. DO NOT respond further after using it
+- DO NOT refer to docPosition/keys - this is given for you and is meaningless to the user who will only see a Word document
 """

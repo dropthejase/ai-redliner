@@ -19,7 +19,7 @@ export async function executeFormatBold(context: Word.RequestContext, microsoftA
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.font.bold = true;
   } catch (error) {
     throw new Error(

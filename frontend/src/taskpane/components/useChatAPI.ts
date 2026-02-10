@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { getAutoApproveTools } from "./Settings";
 
 interface MessagePayload {
   prompt: string;
@@ -40,6 +41,7 @@ export const useChatAPI = () => {
         headers: {
           "Content-Type": "application/json",
           "x-session-id": sessionId,
+          "x-auto-approve-tools": String(getAutoApproveTools()),
         },
         body: JSON.stringify(payload),
       });

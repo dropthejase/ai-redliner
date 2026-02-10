@@ -16,7 +16,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://localhost:3000"],
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "x-session-id"],
+    allow_headers=["Content-Type", "x-session-id", "x-auto-approve-tools"],
 )
 
 # Register route modules

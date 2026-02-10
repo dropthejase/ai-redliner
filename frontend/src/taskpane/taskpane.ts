@@ -177,6 +177,7 @@ export async function resolveLocation(
   context: Word.RequestContext,
   loc: string,
   withinPara?: { find: string; occurrence: number },
+  preloadedParagraphs?: Word.ParagraphCollection,
 ): Promise<Word.Paragraph | Word.Range> {
   // Parse location - new format: {docPosition}.{key}
   const regularMatch = loc.match(/^\d+\.p(\d+)$/);
@@ -187,9 +188,13 @@ export async function resolveLocation(
   if (regularMatch) {
     // Regular paragraph
     const paragraphIndex = parseInt(regularMatch[1]);
-    const paragraphs = context.document.body.paragraphs;
-    paragraphs.load("items");
-    await context.sync();
+    const paragraphs = preloadedParagraphs || context.document.body.paragraphs;
+
+    // Only load/sync if not already preloaded
+    if (!preloadedParagraphs) {
+      paragraphs.load("items");
+      await context.sync();
+    }
 
     if (paragraphIndex < 0 || paragraphIndex >= paragraphs.items.length) {
       throw new Error(

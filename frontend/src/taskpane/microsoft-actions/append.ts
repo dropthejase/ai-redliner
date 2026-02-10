@@ -20,7 +20,7 @@ export async function executeAppend(context: Word.RequestContext, microsoftActio
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.insertText(new_text || "", Word.InsertLocation.end);
   } catch (error) {
     throw new Error(

@@ -19,7 +19,7 @@ export async function executeDelete(context: Word.RequestContext, microsoftActio
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.delete();
   } catch (error) {
     throw new Error(

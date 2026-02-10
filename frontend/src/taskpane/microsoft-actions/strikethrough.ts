@@ -19,7 +19,7 @@ export async function executeStrikethrough(context: Word.RequestContext, microso
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.font.strikeThrough = true;
   } catch (error) {
     throw new Error(
