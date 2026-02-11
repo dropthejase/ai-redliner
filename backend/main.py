@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import invoke_router, models_router, sessions_router
+from api import invoke_router, models_router, sessions_router, config_router
 
 # Logging — file only (configure root logger to capture all modules)
 root_logger = logging.getLogger()
@@ -23,3 +23,4 @@ app.add_middleware(
 app.include_router(invoke_router)
 app.include_router(models_router)
 app.include_router(sessions_router)
+app.include_router(config_router)
