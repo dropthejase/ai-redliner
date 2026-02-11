@@ -243,7 +243,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
         }}
       />
 
-      <ChatInput onSendMessage={handleSendMessage} disabled={loading} />
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={loading}
+        showPrompts={messages.length === 1}
+      />
     </div>
   );
 };
