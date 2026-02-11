@@ -22,6 +22,7 @@ interface Message {
   role: string;
   content?: { text: string }[];
   tool_name?: string;
+  tool_input?: Record<string, any>;
   actions?: Action[];
   actedUpon?: boolean;
   appliedIndices?: number[];
@@ -127,7 +128,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
     } else if (type === "tool_use") {
       setMessages((prev) => [
         ...prev,
-        { role: "tool_indicator", tool_name: data.tool_name as string },
+        { role: "tool_indicator", tool_name: data.tool_name as string, tool_input: data.input as Record<string, any> },
       ]);
     } else if (type === "microsoft_actions") {
       setPendingActions((data.actions as Action[]) || []);
@@ -242,7 +243,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
         }}
       />
 
-      <ChatInput onSendMessage={handleSendMessage} disabled={loading} />
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={loading}
+        showPrompts={messages.length === 1}
+      />
     </div>
   );
 };

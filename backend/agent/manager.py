@@ -1,13 +1,37 @@
+import logging
 from strands import Agent
+from strands_tools import editor, file_read, python_repl, shell
 from strands.types.content import SystemContentBlock
 from strands.session.file_session_manager import FileSessionManager
 from agent.prompts import REDLINER_PROMPT
-from agent.tools import microsoft_actions_tool
+from agent.utils import load_tool_paths, list_skills
+from agent.mcp_loader import load_mcp_clients
 from models.litellm_client import create_litellm_model
 from config import SESSIONS_DIR
 
+logger = logging.getLogger(__name__)
+
+CUSTOM_TOOL_PATHS = load_tool_paths()
+BUILT_IN_TOOLS = [editor, file_read, python_repl, shell]
+MCP_CLIENTS = load_mcp_clients()
+ALL_TOOLS = BUILT_IN_TOOLS + CUSTOM_TOOL_PATHS + MCP_CLIENTS
+
+logger.info("Agent tools loaded: %d built-in, %d custom, %d MCP = %d total",
+            len(BUILT_IN_TOOLS), len(CUSTOM_TOOL_PATHS), len(MCP_CLIENTS), len(ALL_TOOLS))
+
 # In-memory agent cache: session_id -> (Agent, model_id)
 _agent_cache: dict[str, tuple[Agent, str]] = {}
+
+
+def reload_mcp_tools() -> None:
+    """
+    Reload MCP clients from config/mcp.json and update ALL_TOOLS.
+    Clears the agent cache so new agents get the updated tools.
+    """
+    global MCP_CLIENTS, ALL_TOOLS
+    MCP_CLIENTS = load_mcp_clients()
+    ALL_TOOLS = BUILT_IN_TOOLS + CUSTOM_TOOL_PATHS + MCP_CLIENTS
+    _agent_cache.clear()
 
 
 def get_or_create_agent(session_id: str, model_id: str) -> Agent:
@@ -32,9 +56,10 @@ def get_or_create_agent(session_id: str, model_id: str) -> Agent:
         model=model,
         system_prompt=[
             SystemContentBlock(text=REDLINER_PROMPT),
+            SystemContentBlock(text=list_skills()),
             SystemContentBlock(cachePoint={"type": "default"}),
         ],
-        tools=[microsoft_actions_tool],
+        tools=ALL_TOOLS,
         session_manager=session_manager,
     )
     _agent_cache[session_id] = (agent, model_id)

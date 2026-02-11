@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from agent.manager import get_or_create_agent
@@ -40,25 +41,7 @@ async def stream_agent_response(agent, user_message: str):
         # --- Bedrock-style event envelope (tool_use start, messageStop) ---
         elif "event" in event:
             event_type = event["event"]
-
-            # Tool use start - shows badge immediately
-            if "contentBlockStart" in event_type:
-                start = event_type["contentBlockStart"].get("start", {})
-                if "toolUse" in start:
-                    tool_name = start["toolUse"].get("name")
-                    if tool_name:
-                        # Flush text buffer before showing tool badge
-                        if text_buffer:
-                            yield {"type": "content", "data": "".join(text_buffer)}
-                            text_buffer.clear()
-
-                        yield {
-                            "type": "tool_use",
-                            "tool_name": tool_name
-                        }
-
-            # End turn
-            elif "messageStop" in event_type:
+            if "messageStop" in event_type:
                 if event_type["messageStop"].get("stopReason") == "end_turn":
                     # Flush remaining text
                     if text_buffer:
@@ -66,6 +49,7 @@ async def stream_agent_response(agent, user_message: str):
                         text_buffer.clear()
 
                     yield {"type": "end_turn"}
+
 
         # --- Complete message (contains tool invocations) ---
         elif "message" in event:
@@ -96,12 +80,26 @@ async def stream_agent_response(agent, user_message: str):
                                 }
                             except Exception as e:
                                 logger.error("Failed to parse microsoft_actions: %s", str(e))
+                        else:
+                            # Other tools - emit with input for frontend badge
+                            yield {
+                                "type": "tool_use",
+                                "tool_name": tool_name,
+                                "input": tool_use.get("input", {})
+                            }
 
 
 @router.post("/invoke")
 async def invoke(request: Request):
     body = await request.json()
     session_id = request.headers.get("x-session-id", "default")
+    auto_approve = request.headers.get("x-auto-approve-tools", "false") == "true"
+
+    # Set environment variable for tool consent based on user preference
+    if auto_approve:
+        os.environ["BYPASS_TOOL_CONSENT"] = "true"
+    else:
+        os.environ["BYPASS_TOOL_CONSENT"] = "false"
 
     user_input = body.get("prompt", "")
     word_document = body.get("word_document", "")

@@ -4,13 +4,15 @@ import { cn } from "../lib/utils";
 import ChatInterface from "./ChatInterface";
 import HistoryList from "./HistoryList";
 import Settings, { getStoredModel, setStoredModel, ModelId } from "./Settings";
+import Help from "./Help";
 
-type Page = "chat" | "history" | "settings";
+type Page = "chat" | "history" | "settings" | "help";
 
 const TABS: { key: Page; label: string }[] = [
   { key: "chat", label: "Chat" },
   { key: "history", label: "History" },
   { key: "settings", label: "Settings" },
+  { key: "help", label: "Help" },
 ];
 
 const App: React.FC = () => {
@@ -116,6 +118,7 @@ const App: React.FC = () => {
         {page === "chat" && <ChatInterface selectedModel={selectedModel} sessionId={sessionId} onNewSession={handleNewSession} />}
         {page === "history" && <HistoryList onContinue={handleContinueSession} />}
         {page === "settings" && <Settings selectedModel={selectedModel} onModelChange={handleModelChange} />}
+        {page === "help" && <Help />}
       </div>
     </div>
   );

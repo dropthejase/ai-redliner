@@ -19,7 +19,7 @@ export async function executeHighlight(context: Word.RequestContext, microsoftAc
   }
 
   try {
-    const range = await resolveLocation(context, loc, withinPara);
+    const range = await resolveLocation(context, loc, withinPara, paragraphs);
     range.font.highlightColor = "Yellow";
   } catch (error) {
     throw new Error(

@@ -15,6 +15,9 @@ backend/sessions/
 backend/.logs/
 backend/litellm_config.yaml
 
+# Configuration with potential API keys
+config/mcp.json
+
 # Frontend build artifacts and dependencies
 frontend/node_modules/
 frontend/dist/

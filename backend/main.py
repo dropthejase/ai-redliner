@@ -1,14 +1,14 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import invoke_router, models_router, sessions_router
+from api import invoke_router, models_router, sessions_router, config_router
 
-# Logging — file only
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Logging — file only (configure root logger to capture all modules)
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
 _handler = logging.FileHandler(".logs/redliner.log")
 _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s | %(message)s"))
-logger.addHandler(_handler)
+root_logger.addHandler(_handler)
 
 # FastAPI app
 app = FastAPI()
@@ -16,10 +16,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://localhost:3000"],
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "x-session-id"],
+    allow_headers=["Content-Type", "x-session-id", "x-auto-approve-tools"],
 )
 
 # Register route modules
 app.include_router(invoke_router)
 app.include_router(models_router)
 app.include_router(sessions_router)
+app.include_router(config_router)
