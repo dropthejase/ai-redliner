@@ -208,5 +208,79 @@ tail -f backend/.logs/redliner.log
 
 ---
 
-## Supported Microsoft Edits
-See [MICROSOFT_ACTIONS.md](frontend/src/taskpane/microsoft-actions/MICROSOFT_ACTIONS.md)
+## Features
+
+### Core Capabilities
+
+- **Natural Language Document Editing**: Ask the agent to review, modify, or redline your Word documents in plain English
+- **Streaming Responses**: See the agent's thinking in real-time as it analyzes your document
+- **Reviewable Changes**: All proposed edits appear in an expandable panel — you choose what to apply
+- **Change Tracking**: Approved edits are applied with Word's change tracking enabled, creating visible redlines
+- **Session Persistence**: Conversation history is saved — continue past sessions or start fresh anytime
+- **Multi-Model Support**: Switch between Claude, GPT, Gemini, or any LiteLLM-supported model mid-session
+- **MCP Server Integration**: Extend the agent with Model Context Protocol servers for external tools (AWS knowledge, filesystem access, web search, etc.)
+
+### Document Actions
+
+The agent can propose 9 types of edits:
+
+| Action | Description |
+| --- | --- |
+| **replace** | Replace entire paragraph or specific text within a paragraph |
+| **append** | Add text to the end of a paragraph |
+| **delete** | Remove a paragraph entirely |
+| **highlight** | Highlight text for review (yellow background) |
+| **format_bold** | Apply bold formatting to a paragraph |
+| **format_italic** | Apply italic formatting to a paragraph |
+| **strikethrough** | Apply strikethrough formatting to a paragraph |
+| **delete_row** | Remove an entire table row |
+| **insert_row** | Add a new row to a table |
+
+Full details and examples: [microsoft-actions/README.md](frontend/src/taskpane/microsoft-actions/README.md)
+
+### MCP Server Configuration
+
+Add external tools via Model Context Protocol servers:
+
+1. Edit `backend/config/mcp.json`:
+   ```json
+   {
+     "mcpServers": {
+       "aws-knowledge-mcp-server": {
+         "command": "uvx",
+         "args": ["fastmcp", "run", "https://knowledge-mcp.global.api.aws"],
+         "enabled": true
+       }
+     }
+   }
+   ```
+
+2. Open Settings → MCP Servers → click "Reload Servers"
+
+The agent now has access to AWS documentation (or whatever MCP tools you configured). No backend restart needed — the reload button hot-swaps the tools.
+
+See `backend/config/mcp.example.json` for more server examples (filesystem, Brave search, etc.)
+
+### Settings
+
+- **Model Selection**: Choose your preferred model — changes apply to new sessions, or mid-session if continuing from history
+- **Auto-Approve Tools**: Toggle automatic approval for file reads, shell commands, and code execution (default: on)
+- **MCP Servers**: View configured servers, open config folder, reload server list
+
+---
+
+## Disclaimers
+
+**IMPORTANT: READ BEFORE USE**
+
+- **No Warranty**: This tool is provided "as is" without warranty of any kind, express or implied. Use at your own risk.
+- **Not Professional Advice**: This tool does not provide legal, financial, medical, or any other professional advice. Consult qualified professionals for such matters.
+- **User Responsibility**: You are solely responsible for reviewing, testing, and validating all edits before accepting them. The AI may make errors, introduce inaccuracies, or misunderstand instructions.
+- **Security & Privacy**: You are responsible for ensuring this tool meets your organization's security and data privacy requirements. Document content is sent to third-party AI providers (Anthropic, OpenAI, etc.) via API calls.
+- **No Liability**: The developers and contributors of this tool shall not be liable for any damages, losses, or consequences arising from the use or misuse of this software.
+- **Testing Required**: Thoroughly test this tool in a safe environment before using it on important documents. Always maintain backups.
+- **Third-Party Services**: This tool relies on third-party AI services and Model Context Protocol (MCP) servers. The developers are not responsible for the availability, accuracy, or behavior of these external services.
+
+By using this tool, you acknowledge that you have read, understood, and agree to these disclaimers.
+
+---
