@@ -175,12 +175,19 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
     }
 
     const modsToApply = modifications
-      .map((mod, i) => ({
-        ...mod,
-        ...(i in editedTexts ? { new_text: editedTexts[i] } : {}),
-        ...(i in editedComments ? { comment: editedComments[i] } : {}),
-        originalIndex: i,
-      }))
+      .map((mod, i) => {
+        const action = {
+          ...mod,
+          ...(i in editedTexts ? { new_text: editedTexts[i] } : {}),
+          ...(i in editedComments ? { comment: editedComments[i] } : {}),
+          originalIndex: i,
+        };
+        // Strip comment field if showComments is false
+        if (!showComments && 'comment' in action) {
+          delete action.comment;
+        }
+        return action;
+      })
       .filter((mod) => selectedMods.includes(mod.originalIndex))
       .sort((a, b) => {
         // Sort by docPosition descending (same logic as executeWordAction)

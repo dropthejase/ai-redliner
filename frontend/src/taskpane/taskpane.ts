@@ -148,6 +148,24 @@ async function switchToSimpleMarkupMode(): Promise<void> {
   }
 }
 
+/**
+ * Switches the Word view to All Markup mode after applying changes.
+ * This allows the user to see all tracked changes clearly.
+ * Requires WordApiDesktop 1.4 or higher.
+ */
+async function switchToAllMarkupMode(): Promise<void> {
+  try {
+    await Word.run(async (context: Word.RequestContext) => {
+      const revisionsFilter = context.document.activeWindow.view.revisionsFilter;
+      revisionsFilter.set({ markup: "All" });
+      await context.sync();
+    });
+  } catch (viewError) {
+    console.log("Note: Could not set All Markup mode:", viewError);
+    // Continue anyway - this is a nice-to-have, not critical
+  }
+}
+
 export async function getWordDocumentContent(): Promise<string> {
   try {
     // Set Simple Markup mode for consistent hash calculation
@@ -358,6 +376,8 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
   const errors: string[] = [];
 
   try {
+    // Ensure Simple Markup mode before execution for consistent behavior
+    await switchToSimpleMarkupMode();
     await setTrackingMode("trackAll");
 
     await Word.run(async (context: Word.RequestContext) => {
@@ -441,5 +461,8 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
   } catch (error) {
     console.log("Error executing Word actions: " + error);
     throw error;
+  } finally {
+    // Switch to All Markup so user can see all tracked changes
+    await switchToAllMarkupMode();
   }
 }
