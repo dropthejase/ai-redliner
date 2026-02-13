@@ -9,6 +9,7 @@ interface Action {
   action: string;
   loc: string;
   new_text?: string;
+  comment?: string;
   withinPara?: {
     find: string;
     occurrence: number;
@@ -123,6 +124,8 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
   );
   const [expandedMods, setExpandedMods] = React.useState<number[]>([]);
   const [editedTexts, setEditedTexts] = React.useState<Record<number, string>>({});
+  const [editedComments, setEditedComments] = React.useState<Record<number, string>>({});
+  const [showComments, setShowComments] = React.useState(true);
   const [errors, setErrors] = React.useState<Record<number, string>>({});
   const [successes, setSuccesses] = React.useState<Record<number, boolean>>({});
 
@@ -175,6 +178,7 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
       .map((mod, i) => ({
         ...mod,
         ...(i in editedTexts ? { new_text: editedTexts[i] } : {}),
+        ...(i in editedComments ? { comment: editedComments[i] } : {}),
         originalIndex: i,
       }))
       .filter((mod) => selectedMods.includes(mod.originalIndex))
@@ -237,6 +241,12 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
   const hasErrors = Object.keys(errors).length > 0;
   const errorCount = Object.keys(errors).length;
   const successCount = Object.keys(successes).length;
+  const commentCount = modifications.filter((mod) => mod.comment).length;
+
+  React.useEffect(() => {
+    console.log("ModificationReview - modifications:", modifications);
+    console.log("ModificationReview - commentCount:", commentCount);
+  }, [modifications, commentCount]);
 
   const getStatus = (i: number): "applied" | "rejected" | "error" | "pending" => {
     if (errors[i]) return "error";
@@ -265,6 +275,14 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
         </div>
         {!disabled && (
           <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
+            {commentCount > 0 && (
+              <button
+                className="text-xs text-primary hover:underline"
+                onClick={() => setShowComments(!showComments)}
+              >
+                {showComments ? "Exclude" : "Include"} Comments ({commentCount})
+              </button>
+            )}
             <button
               className="text-xs text-primary hover:underline"
               onClick={handleToggleAll}
@@ -341,6 +359,24 @@ const ModificationReview: React.FC<ModificationReviewProps> = ({
                           onClick={(e) => e.stopPropagation()}
                         />
                       )
+                    )}
+                    {showComments && (mod.comment || i in editedComments) && (
+                      <div className="mt-2">
+                        <label className="text-xs text-muted-foreground mb-1 block">AI Comment</label>
+                        {disabled ? (
+                          <div className="bg-primary/5 rounded px-3 py-2 whitespace-pre-wrap break-words text-foreground border border-primary/20">
+                            {editedComments[i] ?? mod.comment}
+                          </div>
+                        ) : (
+                          <textarea
+                            className="w-full bg-primary/5 rounded px-3 py-2 text-foreground text-xs resize-none border border-primary/20 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            rows={Math.max(2, (editedComments[i] ?? mod.comment ?? "").split("\n").length)}
+                            value={editedComments[i] ?? mod.comment ?? ""}
+                            onChange={(e) => setEditedComments((prev) => ({ ...prev, [i]: e.target.value }))}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+                      </div>
                     )}
                     {(errors[i] || (disabled && failedIndices.includes(i))) && (
                       <div className="mt-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-destructive">

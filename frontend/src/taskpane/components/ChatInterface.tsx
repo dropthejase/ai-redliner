@@ -16,6 +16,7 @@ interface Action {
   action: string;
   loc: string;
   new_text?: string;
+  comment?: string;
 }
 
 interface Message {
@@ -155,9 +156,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
   };
 
   const handleSendMessage = async (inputValue: string) => {
+    console.log("🔍 handleSendMessage called with:", inputValue);
     try {
+      console.log("🔍 Step 1: Check pending actions");
       // Auto-reject pending actions when user sends a new message
       if (pendingActions.length > 0) {
+        console.log("🔍 Rejecting pending actions");
         setMessages((prev) => [
           ...prev,
           {
@@ -170,23 +174,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
         setPendingActions([]);
       }
 
-      const isEmpty = await isDocumentEmpty();
+      console.log("🔍 Step 2: Check if document is empty");
+      let isEmpty = false;
+      try {
+        isEmpty = await isDocumentEmpty();
+        console.log("🔍 isEmpty:", isEmpty);
+      } catch (emptyCheckError) {
+        console.error("🔍 isDocumentEmpty() failed:", emptyCheckError);
+        throw emptyCheckError;
+      }
+
+      console.log("🔍 Step 3: Get document content");
       const documentContent = isEmpty ? "" : await getWordDocumentContent();
+      console.log("🔍 documentContent length:", documentContent.length);
+
+      console.log("🔍 Step 4: Get selected text");
       const selectedText = await getSelectedText();
+      console.log("🔍 selectedText:", selectedText);
 
-      console.log(documentContent);
-      console.log("Selected text:", selectedText);
-
+      console.log("🔍 Step 5: Calculate hash");
       const hash = simpleHash(documentContent);
       setDocumentHashWhenSent(hash);
 
+      console.log("🔍 Step 6: Update messages");
       setMessages((prev) => [
         ...prev,
         { role: "user", content: [{ text: inputValue }] },
       ]);
 
+      console.log("🔍 Step 7: Set loading");
       setLoading(true);
 
+      console.log("🔍 Step 8: About to call sendMessage...");
       await sendMessage(
         sessionId,
         {
