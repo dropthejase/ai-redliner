@@ -15,8 +15,10 @@ Complete guide to document edits supported by Redliner's agent.
 | `format_bold` | ❌ | ❌ | Paragraph | Apply bold formatting |
 | `format_italic` | ❌ | ❌ | Paragraph | Apply italic formatting |
 | `strikethrough` | ❌ | ❌ | Paragraph | Apply strikethrough formatting |
+| `delete_table` | ❌ | ❌ | Entire table | Remove entire table from document |
 | `delete_row` | ❌ | ❌ | Table row | Remove entire row from table |
 | `insert_row` | ❌ | ✅ | Table row | Insert new row(s) after specified row |
+| `create_table` | ❌ | ❌ | Paragraph anchor | Create new table after specified paragraph |
 
 ---
 
@@ -394,12 +396,11 @@ For `replace` and `append` actions, `new_text` can be an empty string (`""`). Th
 
 ## Limitations
 
-- **No cross-paragraph operations**: Each action targets exactly one paragraph, cell, or row
+- **No cross-paragraph operations**: Each action targets exactly one paragraph, cell, row, or table
 - **No undo via agent**: Once applied, changes are Word tracked changes — user must accept/reject via Word's Review tab
 - **Formatting is paragraph-level**: Cannot bold just one word (use `withinPara` to isolate the word in a separate edit)
 - **No image/shape operations**: Agent cannot insert, modify, or delete images, shapes, or drawings
 - **No header/footer edits**: Actions only target main document body
-- **No comment insertion**: Agent cannot add Word comments (tracked on roadmap)
 
 ---
 
