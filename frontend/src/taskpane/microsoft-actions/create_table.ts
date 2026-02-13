@@ -36,8 +36,6 @@ export async function executeCreateTable(context: Word.RequestContext, microsoft
 
     // Insert table after the target paragraph
     const newTable = targetParagraph.insertTable(rowCount, columnCount, "After", values);
-
-    await context.sync();
   } catch (error) {
     throw new Error(
       `Create table operation failed: ${error instanceof Error ? error.message : error}\nAction: ${JSON.stringify(microsoftAction, null, 2)}`

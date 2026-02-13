@@ -3,11 +3,35 @@
 
 set -e
 
-# Check if litellm is installed with uv
-if ! uv pip show litellm &> /dev/null; then
-    echo "❌ litellm not found. Installing..."
-    uv pip install 'litellm[proxy]'
+# Change to backend directory to ensure correct project context
+cd "$(dirname "$0")"
+
+# Sync core dependencies from pyproject.toml
+echo "📦 Syncing core dependencies..."
+uv sync
+
+# Install litellm proxy dependencies (backoff is the main one needed)
+# Don't reinstall litellm itself to avoid conflicts with strands-agents[litellm]
+echo "🔧 Installing LiteLLM proxy dependencies..."
+uv pip install backoff
+
+# Verify critical proxy dependencies
+REQUIRED_DEPS=("litellm" "backoff")
+MISSING=()
+
+for dep in "${REQUIRED_DEPS[@]}"; do
+    if ! uv pip show "$dep" &> /dev/null 2>&1; then
+        MISSING+=("$dep")
+    fi
+done
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+    echo "❌ Missing critical dependencies: ${MISSING[*]}"
+    echo "💡 Try running manually: uv pip install 'litellm[proxy]'"
+    exit 1
 fi
+
+echo "✅ Dependencies verified"
 
 # Load .env file if it exists
 if [ -f .env ]; then
@@ -27,5 +51,5 @@ echo "🚀 Starting LiteLLM proxy on http://127.0.0.1:4000"
 echo "   Config: litellm_config.yaml"
 echo ""
 
-# Start the proxy using uv
-uv run litellm --config litellm_config.yaml --host 127.0.0.1 --port 4000 --debug #--detailed_debug
+# Start the proxy using uv run (ensures correct venv)
+uv run --with 'litellm[proxy]' litellm --config litellm_config.yaml --host 127.0.0.1 --port 4000 --debug #--detailed_debug

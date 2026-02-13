@@ -148,6 +148,7 @@ async def mock_stream(word_document: str, model_id: str = "unknown"):
                 "action": "replace",
                 "loc": "0.p0",
                 "new_text": "The fox says hello.",
+                "comment": "This is a test comment showing how comments appear in the modification review UI.",
             },
             # 2. Within-paragraph edit (first occurrence of [test])
             {
@@ -155,6 +156,7 @@ async def mock_stream(word_document: str, model_id: str = "unknown"):
                 "action": "replace",
                 "loc": "1.t0.r0.c0.p0",
                 "new_text": "TEST1",
+                "comment": "This is a test comment for withinPara change.",
                 "withinPara": {
                     "find": "[test]",
                     "occurrence": 0,
@@ -220,6 +222,7 @@ async def mock_stream(word_document: str, model_id: str = "unknown"):
                 "task": "Delete entire table t1",
                 "action": "delete_table",
                 "loc": "10.t1",
+                "comment": "This will permanently remove the entire table. Verify that the data is no longer needed before applying.",
             },
             # 10. Error testing
             {
