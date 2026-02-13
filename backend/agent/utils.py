@@ -156,6 +156,7 @@ async def mock_stream(word_document: str, model_id: str = "unknown"):
                 "action": "replace",
                 "loc": "1.t0.r0.c0.p0",
                 "new_text": "TEST1",
+                "comment": "This is a test comment for withinPara change.",
                 "withinPara": {
                     "find": "[test]",
                     "occurrence": 0,
