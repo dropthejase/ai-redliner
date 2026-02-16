@@ -12,5 +12,10 @@ dependencies = [
     "httpx>=0.27.0",
     "strands-agents-tools>=0.2.20",
     "ddgs>=9.10.0",
-    "mcp>=1.0.0"
+    "mcp>=1.0.0",
+    "pillow>=12.1.1",
+    "cryptography>=46.0.5",
 ]
+
+[tool.uv.sources]
+strands-agents-tools = { git = "https://github.com/strands-agents/tools.git" }
