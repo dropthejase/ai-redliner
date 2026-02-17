@@ -28,9 +28,3 @@ frontend/.office-addin-dev-certs/
 sample
 CLAUDE.md
 test
-
-
-.agents
-.claude
-.codex
-.gemini
