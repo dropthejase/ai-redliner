@@ -1807,7 +1807,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=12.1.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "strands-agents", extras = ["litellm"], specifier = ">=0.1.0" },
-    { name = "strands-agents-tools", git = "https://github.com/strands-agents/tools.git" },
+    { name = "strands-agents-tools", specifier = ">=0.2.20" },
     { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 
@@ -2135,8 +2135,8 @@ litellm = [
 
 [[package]]
 name = "strands-agents-tools"
-version = "0.2.21.dev1+g24889c9c0"
-source = { git = "https://github.com/strands-agents/tools.git#24889c9c0aee5a5d113decdc02e3cc5fcdcd12b8" }
+version = "0.2.23"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "aws-requests-auth" },
@@ -2155,6 +2155,10 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "watchdog" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/0b/95529cd0bbb0f3186adcae0476f506d3f098b95b552621195f190dcda14b/strands_agents_tools-0.2.23.tar.gz", hash = "sha256:40d0c30859f0cf00c62f5efacdb917ae541c7fe9affceee5adb63ba49657f887", size = 474100, upload-time = "2026-03-19T14:29:29.917Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/3c/b5d8586448878e755590bfc59824abc2b137b21b8a8183008e13c8316b13/strands_agents_tools-0.2.23-py3-none-any.whl", hash = "sha256:d98b602002eb978850a32d597f94262dd3a95c6871ab2007fbb0ad165799d8df", size = 312782, upload-time = "2026-03-19T14:29:27.768Z" },
 ]
 
 [[package]]
