@@ -1,6 +1,6 @@
 import logging
 from strands import Agent
-from strands_tools import editor, file_read, python_repl, shell
+from strands_tools import editor, file_read, shell
 from strands.types.content import SystemContentBlock
 from strands.session.file_session_manager import FileSessionManager
 from agent.prompts import REDLINER_PROMPT
@@ -12,7 +12,7 @@ from config import SESSIONS_DIR
 logger = logging.getLogger(__name__)
 
 CUSTOM_TOOL_PATHS = load_tool_paths()
-BUILT_IN_TOOLS = [editor, file_read, python_repl, shell]
+BUILT_IN_TOOLS = [editor, file_read, shell]
 MCP_CLIENTS = load_mcp_clients()
 ALL_TOOLS = BUILT_IN_TOOLS + CUSTOM_TOOL_PATHS + MCP_CLIENTS
 
