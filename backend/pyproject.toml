@@ -19,3 +19,8 @@ dependencies = [
 
 [tool.uv.sources]
 strands-agents-tools = { git = "https://github.com/strands-agents/tools.git" }
+
+[dependency-groups]
+dev = [
+    "pip-audit>=2.10.0",
+]
