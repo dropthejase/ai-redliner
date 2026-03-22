@@ -18,7 +18,7 @@ Complete guide to document edits supported by Redliner's agent.
 | `delete_table` | ❌ | ❌ | Entire table | Remove entire table from document |
 | `delete_row` | ❌ | ❌ | Table row | Remove entire row from table |
 | `insert_row` | ❌ | ✅ | Table row | Insert new row(s) after specified row |
-| `create_table` | ❌ | ❌ | Paragraph anchor | Create new table after specified paragraph |
+| `create_table` | ❌ | ❌ | Paragraph anchor | Create new table after specified paragraph (requires `rowCount`, `columnCount`) |
 
 ---
 
@@ -29,15 +29,19 @@ Every action must include:
 ```json
 {
   "task": "Brief description shown to user",
-  "action": "replace | append | delete | highlight | format_bold | format_italic | strikethrough | delete_row | insert_row",
-  "loc": "p0 | p12 | t0.r1.c0.p0 | t0.r2"
+  "action": "replace | append | delete | highlight | format_bold | format_italic | strikethrough | delete_row | insert_row | create_table | delete_table",
+  "loc": "5.p5 | 2.t0.r1.c2.p0 | 10.t0.r2 | 10.t0"
 }
 ```
 
 Optional fields:
 - `new_text` (string): Required for `replace`, `append`. Omitted for others.
-- `rowData` (array): Required for `insert_row`. Format: `[["cell1", "cell2"], ["cell3", "cell4"]]`
+- `comment` (string): Optional. Inserts a Word comment at the target location before the action executes.
 - `withinPara` (object): Optional for `replace` to target specific text. Format: `{"find": "text to find", "occurrence": 0}`
+- `rowData` (array): Required for `insert_row`. Format: `[["cell1", "cell2"], ["cell3", "cell4"]]`
+- `rowCount` (number): Required for `create_table`.
+- `columnCount` (number): Required for `create_table`.
+- `values` (array): Optional for `create_table`. 2D array of initial cell values.
 
 ---
 
@@ -45,23 +49,25 @@ Optional fields:
 
 ### Regular Paragraphs
 
-Format: `p{index}`
+Format: `{docPosition}.p{index}`
 
 Examples:
-- `p0` — first paragraph in document
-- `p5` — sixth paragraph (0-indexed)
-- `p12` — thirteenth paragraph
 
-Paragraph numbers are **global document positions**, counting from the start of the document.
+- `0.p0` — first paragraph in document
+- `5.p5` — paragraph at document position 5
+- `12.p12` — paragraph at document position 12
+
+Paragraph numbers are **global document positions**, counting from the start of the document (0-indexed). The `docPosition` and `p{index}` values are the same for top-level paragraphs.
 
 ### Table Cells
 
-Format: `t{table}.r{row}.c{col}.p{para}`
+Format: `{docPosition}.t{table}.r{row}.c{col}.p{para}`
 
 Examples:
-- `t0.r0.c0.p0` — first paragraph in top-left cell of first table
-- `t1.r2.c1.p0` — first paragraph in third row, second column of second table
-- `t0.r0.c0.p1` — second paragraph in same cell (cells can have multiple paragraphs)
+
+- `2.t0.r0.c0.p0` — first paragraph in top-left cell of first table (at doc position 2)
+- `2.t1.r2.c1.p0` — first paragraph in third row, second column of second table
+- `2.t0.r0.c0.p1` — second paragraph in same cell (cells can have multiple paragraphs)
 
 **How tables affect paragraph numbering:**
 
@@ -79,11 +85,12 @@ Table cells "consume" paragraph indices — `p5` comes after `p0` because the ta
 
 ### Table Rows
 
-Format: `t{table}.r{row}`
+Format: `{docPosition}.t{table}.r{row}`
 
 Examples:
-- `t0.r0` — first row of first table
-- `t1.r2` — third row of second table
+
+- `3.t0.r0` — first row of first table (at doc position 3)
+- `3.t1.r2` — third row of second table
 
 Used only for `delete_row` and `insert_row` actions.
 
@@ -122,6 +129,7 @@ Replaces the full text of paragraph `p0`.
 Finds the first occurrence (`occurrence: 0`) of `"Section 3.1"` in paragraph `p5` and replaces it with `"Section 3.2"`. The rest of the paragraph stays unchanged.
 
 **Occurrence numbering:**
+
 - `0` = first match
 - `1` = second match
 - `2` = third match, etc.
