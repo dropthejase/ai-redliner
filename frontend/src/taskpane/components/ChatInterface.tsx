@@ -16,6 +16,7 @@ interface Action {
   action: string;
   loc: string;
   new_text?: string;
+  comment?: string;
 }
 
 interface Message {
@@ -170,12 +171,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedModel, sessionId,
         setPendingActions([]);
       }
 
-      const isEmpty = await isDocumentEmpty();
-      const documentContent = isEmpty ? "" : await getWordDocumentContent();
-      const selectedText = await getSelectedText();
+      let isEmpty = false;
+      try {
+        isEmpty = await isDocumentEmpty();
+      } catch (emptyCheckError) {
+        throw emptyCheckError;
+      }
 
-      console.log(documentContent);
-      console.log("Selected text:", selectedText);
+      const documentContent = isEmpty ? "" : await getWordDocumentContent();
+
+      const selectedText = await getSelectedText();
 
       const hash = simpleHash(documentContent);
       setDocumentHashWhenSent(hash);

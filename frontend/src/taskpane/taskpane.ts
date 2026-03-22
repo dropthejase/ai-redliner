@@ -16,6 +16,7 @@ interface MicrosoftAction {
   action: string;
   loc: string;
   new_text?: string;
+  comment?: string;
   withinPara?: {
     find: string;
     occurrence: number;
@@ -109,6 +110,14 @@ async function createParagraphMapping(): Promise<Record<string, string>> {
       "=== Paragraphs Only ===\n" + rawParaList + "\n" + "=".repeat(50),
     );
 
+    // Debug: Log full paragraph mapping with docPosition.key format
+    const mappingDisplay = Object.entries(paragraphMapping)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
+    console.log(
+      "=== Paragraph Mapping ===\n" + mappingDisplay + "\n" + "=".repeat(50),
+    );
+
     return paragraphMapping;
   });
 }
@@ -135,6 +144,24 @@ async function switchToSimpleMarkupMode(): Promise<void> {
     });
   } catch (viewError) {
     console.log("Note: Could not set Simple Markup mode:", viewError);
+    // Continue anyway - this is a nice-to-have, not critical
+  }
+}
+
+/**
+ * Switches the Word view to All Markup mode after applying changes.
+ * This allows the user to see all tracked changes clearly.
+ * Requires WordApiDesktop 1.4 or higher.
+ */
+async function switchToAllMarkupMode(): Promise<void> {
+  try {
+    await Word.run(async (context: Word.RequestContext) => {
+      const revisionsFilter = context.document.activeWindow.view.revisionsFilter;
+      revisionsFilter.set({ markup: "All" });
+      await context.sync();
+    });
+  } catch (viewError) {
+    console.log("Note: Could not set All Markup mode:", viewError);
     // Continue anyway - this is a nice-to-have, not critical
   }
 }
@@ -169,9 +196,13 @@ export async function getSelectedText(): Promise<string | null> {
 }
 
 /**
- * Resolves a location string (e.g., "5.p5", "2.t0.r1.c2.p0") to a Word.Paragraph or Word.Range.
+ * Resolves a location string to a Word.Paragraph or Word.Range.
+ * Supports formats:
+ * - "5.p5" - regular paragraph
+ * - "2.t0.r1.c2.p0" - table cell paragraph
+ * - "10.t1" - entire table (returns table range)
+ * - "10.t0.r2" - table row (returns row range)
  * If withinPara is provided, searches within the paragraph and returns the specific Range occurrence.
- * If withinPara is not provided, returns the Paragraph object for node-level operations.
  */
 export async function resolveLocation(
   context: Word.RequestContext,
@@ -181,7 +212,46 @@ export async function resolveLocation(
 ): Promise<Word.Paragraph | Word.Range> {
   // Parse location - new format: {docPosition}.{key}
   const regularMatch = loc.match(/^\d+\.p(\d+)$/);
-  const tableMatch = loc.match(/^\d+\.t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
+  const tableCellMatch = loc.match(/^\d+\.t(\d+)\.r(\d+)\.c(\d+)\.p(\d+)$/);
+  const tableOnlyMatch = loc.match(/^\d+\.t(\d+)$/);
+  const tableRowMatch = loc.match(/^\d+\.t(\d+)\.r(\d+)$/);
+
+  // Handle table-only format (e.g., "10.t1" for delete_table)
+  if (tableOnlyMatch) {
+    const tableIndex = parseInt(tableOnlyMatch[1]);
+    const tables = context.document.body.tables;
+    tables.load("items");
+    await context.sync();
+
+    if (tableIndex < 0 || tableIndex >= tables.items.length) {
+      throw new Error(`Table index ${tableIndex} out of range (0-${tables.items.length - 1})`);
+    }
+
+    return tables.items[tableIndex].getRange();
+  }
+
+  // Handle table row format (e.g., "10.t0.r2" for delete_row/insert_row)
+  if (tableRowMatch) {
+    const tableIndex = parseInt(tableRowMatch[1]);
+    const rowIndex = parseInt(tableRowMatch[2]);
+    const tables = context.document.body.tables;
+    tables.load("items");
+    await context.sync();
+
+    if (tableIndex < 0 || tableIndex >= tables.items.length) {
+      throw new Error(`Table index ${tableIndex} out of range (0-${tables.items.length - 1})`);
+    }
+
+    const table = tables.items[tableIndex];
+    table.rows.load("items");
+    await context.sync();
+
+    if (rowIndex < 0 || rowIndex >= table.rows.items.length) {
+      throw new Error(`Row index ${rowIndex} out of range for table ${tableIndex} (0-${table.rows.items.length - 1})`);
+    }
+
+    return table.rows.items[rowIndex].range;
+  }
 
   let targetParagraph: Word.Paragraph;
 
@@ -203,9 +273,9 @@ export async function resolveLocation(
     }
 
     targetParagraph = paragraphs.items[paragraphIndex];
-  } else if (tableMatch) {
+  } else if (tableCellMatch) {
     // Table cell paragraph
-    const [, t, r, c, p] = tableMatch;
+    const [, t, r, c, p] = tableCellMatch;
     const tableIndex = parseInt(t);
     const rowIndex = parseInt(r);
     const colIndex = parseInt(c);
@@ -306,6 +376,8 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
   const errors: string[] = [];
 
   try {
+    // Ensure Simple Markup mode before execution for consistent behavior
+    await switchToSimpleMarkupMode();
     await setTrackingMode("trackAll");
 
     await Word.run(async (context: Word.RequestContext) => {
@@ -327,6 +399,13 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
           // Log execution order
           const task = (action as any).task || action.action;
           console.log(`Executing: ${task} (${action.loc})`);
+
+          // Add comment if present - queued before action
+          if (action.comment) {
+            const target = await resolveLocation(context, action.loc, action.withinPara, paragraphs);
+            const range = target instanceof Word.Paragraph ? target.getRange() : target;
+            range.insertComment(action.comment);
+          }
 
           switch (action.action) {
             case "none":
@@ -382,5 +461,8 @@ export async function executeWordAction(microsoftActions: MicrosoftAction[]) {
   } catch (error) {
     console.log("Error executing Word actions: " + error);
     throw error;
+  } finally {
+    // Switch to All Markup so user can see all tracked changes
+    await switchToAllMarkupMode();
   }
 }

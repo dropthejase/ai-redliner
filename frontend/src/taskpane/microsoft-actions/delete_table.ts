@@ -32,8 +32,6 @@ export async function executeDeleteTable(context: Word.RequestContext, microsoft
 
     const table = tables.items[tableIndex];
     table.delete();
-
-    await context.sync();
   } catch (error) {
     throw new Error(
       `Delete table operation failed: ${error instanceof Error ? error.message : error}\nAction: ${JSON.stringify(microsoftAction, null, 2)}`

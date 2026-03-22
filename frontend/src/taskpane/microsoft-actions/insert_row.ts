@@ -44,8 +44,6 @@ export async function executeInsertRow(context: Word.RequestContext, microsoftAc
     // Get the target row and insert after it using TableRow.insertRows()
     const targetRow = table.rows.items[rowIndex];
     targetRow.insertRows("After", rowData?.length ?? 1, rowData);
-
-    await context.sync();
   } catch (error) {
     throw new Error(
       `Insert row operation failed: ${error instanceof Error ? error.message : error}\nAction: ${JSON.stringify(microsoftAction, null, 2)}`
