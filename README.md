@@ -6,22 +6,22 @@ AI-powered Word document redlining assistant. Ask the agent to review or modify 
 
 ## Quick Demos
 ### Ask questions about the document
-![Ask questions about the document](assets/1_summarise.mov)
+![Ask questions about the document](assets/1_summarise.gif)
 
 ### Continue a previous session
-![Continue a previous session](assets/2_history.mov)
+![Continue a previous session](assets/2_history.gif)
 
 ### Get the AI to suggest modifications. Approve the ones you like!
-![Get the AI to suggest modifications](assets/3_modify.mov)
+![Get the AI to suggest modifications](assets/3_modify.gif)
 
 ### ...or override the AI-suggested modification!
-![Override the AI-suggested modification](assets/4_override.mov)
+![Override the AI-suggested modification](assets/4_override_mod.gif)
 
 ### Add stdio MCP servers
-![Add stdio MCP servers](assets/5_mcp.mov)
+![Add stdio MCP servers](assets/5_mcp.gif)
 
 ### Run table operations
-![Run table operations](assets/6_tables.mov)
+![Run table operations](assets/6_tables.gif)
 
 ## Setup
 
